@@ -1,0 +1,80 @@
+name: Update Manifest
+
+on:
+  repository_dispatch:
+    types: [update-manifest]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version (without v prefix)'
+        required: true
+      hash:
+        description: 'SHA256 hash'
+        required: true
+      url:
+        description: 'Download URL'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout bucket
+        uses: actions/checkout@v4
+
+      - name: Get payload
+        id: payload
+        run: |
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            echo "VERSION=${{ github.event.client_payload.version }}" >> $GITHUB_OUTPUT
+            echo "HASH=${{ github.event.client_payload.hash }}" >> $GITHUB_OUTPUT
+            echo "URL=${{ github.event.client_payload.url }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+            echo "HASH=${{ github.event.inputs.hash }}" >> $GITHUB_OUTPUT
+            echo "URL=${{ github.event.inputs.url }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update manifest
+        run: |
+          VERSION="${{ steps.payload.outputs.VERSION }}"
+          HASH="${{ steps.payload.outputs.HASH }}"
+          URL="${{ steps.payload.outputs.URL }}"
+          
+          echo "Updating manifest to version $VERSION"
+          echo "Hash: $HASH"
+          echo "URL: $URL"
+          
+          # Update browserselector.json using jq
+          jq --arg version "$VERSION" \
+             --arg hash "$HASH" \
+             --arg url "$URL" \
+             '.version = $version | 
+              .architecture."64bit".url = $url | 
+              .architecture."64bit".hash = $hash' \
+             bucket/browserselector.json > bucket/browserselector.json.tmp
+          
+          mv bucket/browserselector.json.tmp bucket/browserselector.json
+          
+          # Show updated manifest
+          echo "Updated manifest:"
+          cat bucket/browserselector.json
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git add bucket/browserselector.json
+          
+          # Check if there are changes to commit
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update browserselector to ${{ steps.payload.outputs.VERSION }}"
+            git push
+          fi

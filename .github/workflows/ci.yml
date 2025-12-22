@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    paths:
+      - 'bucket/*.json'
+  pull_request:
+    paths:
+      - 'bucket/*.json'
+
+jobs:
+  validate:
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate JSON syntax
+        shell: pwsh
+        run: |
+          $hasErrors = $false
+          
+          Get-ChildItem bucket/*.json | ForEach-Object {
+            $name = $_.Name
+            Write-Host "Validating: $name"
+            
+            try {
+              $content = Get-Content $_.FullName -Raw
+              $null = $content | ConvertFrom-Json
+              Write-Host "  ✓ Valid JSON syntax" -ForegroundColor Green
+            } catch {
+              Write-Host "  ✗ Invalid JSON: $_" -ForegroundColor Red
+              $hasErrors = $true
+            }
+          }
+          
+          if ($hasErrors) {
+            exit 1
+          }
+
+      - name: Install Scoop
+        shell: pwsh
+        run: |
+          Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
+          Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression
+
+      - name: Validate manifests with Scoop
+        shell: pwsh
+        run: |
+          # Add this bucket locally
+          scoop bucket add local $PWD
+          
+          $hasErrors = $false
+          
+          Get-ChildItem bucket/*.json | ForEach-Object {
+            $name = $_.BaseName
+            Write-Host "`nValidating manifest: $name"
+            
+            # Try to get info (validates manifest structure)
+            $info = scoop info $name 2>&1
+            if ($LASTEXITCODE -eq 0) {
+              Write-Host "  ✓ Valid manifest structure" -ForegroundColor Green
+              
+              # Display key info
+              $manifest = Get-Content $_.FullName | ConvertFrom-Json
+              Write-Host "    Version: $($manifest.version)"
+              Write-Host "    Homepage: $($manifest.homepage)"
+            } else {
+              Write-Host "  ✗ Invalid manifest: $info" -ForegroundColor Red
+              $hasErrors = $true
+            }
+          }
+          
+          if ($hasErrors) {
+            exit 1
+          }
+          
+          Write-Host "`n✓ All manifests validated successfully!" -ForegroundColor Green
