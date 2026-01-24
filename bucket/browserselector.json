@@ -1,5 +1,5 @@
 {
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Accessible Windows browser selector - choose which browser opens your links",
   "homepage": "https://github.com/ruslan-rv-ua/BrowserSelector",
   "license": "MIT",
@@ -9,8 +9,8 @@
   ],
   "architecture": {
     "64bit": {
-      "url": "https://github.com/ruslan-rv-ua/BrowserSelector/releases/download/v0.1.2/BrowserSelector-0.1.2-win64.zip",
-      "hash": "9f977aad99438afb988a90f68f942e61b6cd2899560d401feb4f5a63289dace7"
+      "url": "https://github.com/ruslan-rv-ua/BrowserSelector/releases/download/v0.2.0/BrowserSelector-0.2.0-win64.zip",
+      "hash": "d75f2d8a3ca0ccd74f788c67ba1857816d5a2c85699059bd6a50164cda683071"
     }
   },
   "extract_dir": "BrowserSelector",
