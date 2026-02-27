@@ -1,6 +1,6 @@
 # Scoop Bucket
 
-Personal Scoop bucket containing Browser Selector and other applications.
+Personal Scoop bucket containing portable Windows applications.
 
 ## Usage
 
@@ -14,12 +14,14 @@ scoop bucket add ruslan-rv-ua https://github.com/ruslan-rv-ua/scoop-bucket
 
 ```powershell
 scoop install browserselector
+scoop install quick-snippets
 ```
 
 ### Update applications
 
 ```powershell
 scoop update browserselector
+scoop update quick-snippets
 ```
 
 ## Available Applications
@@ -27,6 +29,7 @@ scoop update browserselector
 | Application | Description |
 |-------------|-------------|
 | [browserselector](https://github.com/ruslan-rv-ua/BrowserSelector) | Accessible Windows browser selector - choose which browser opens your links |
+| [quick-snippets](https://github.com/ruslan-rv-ua/quick-snippets) | Portable desktop app for quick access to text snippets |
 
 ## About Browser Selector
 

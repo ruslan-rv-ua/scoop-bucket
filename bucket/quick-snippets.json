@@ -1,0 +1,41 @@
+{
+  "version": "0.1.0",
+  "description": "Portable Windows desktop app for quick access to text snippets",
+  "homepage": "https://github.com/ruslan-rv-ua/quick-snippets",
+  "license": "MIT",
+  "notes": [
+    "QuickSnippets is a portable app — your data files (snippets.db, settings.json)",
+    "are stored next to the executable and preserved across Scoop updates.",
+    "Use Ctrl+Shift+Space (default) to toggle the snippet window."
+  ],
+  "architecture": {
+    "64bit": {
+      "url": "https://github.com/ruslan-rv-ua/quick-snippets/releases/download/v0.1.0/quick-snippets-windows-x64-v0.1.0.zip",
+      "hash": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  },
+  "bin": "quick-snippets.exe",
+  "shortcuts": [
+    [
+      "quick-snippets.exe",
+      "QuickSnippets"
+    ]
+  ],
+  "persist": [
+    "snippets.db",
+    "settings.json"
+  ],
+  "checkver": {
+    "github": "https://github.com/ruslan-rv-ua/quick-snippets"
+  },
+  "autoupdate": {
+    "architecture": {
+      "64bit": {
+        "url": "https://github.com/ruslan-rv-ua/quick-snippets/releases/download/v$version/quick-snippets-windows-x64-v$version.zip"
+      }
+    },
+    "hash": {
+      "url": "$url.sha256"
+    }
+  }
+}
