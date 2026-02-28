@@ -1,50 +1,56 @@
-# Scoop Bucket
+# scoop-bucket
 
-Personal Scoop bucket containing portable Windows applications.
+Scoop bucket with portable Windows applications.
 
-## Usage
-
-### Add this bucket
+## Installation
 
 ```powershell
 scoop bucket add ruslan-rv-ua https://github.com/ruslan-rv-ua/scoop-bucket
 ```
 
-### Install applications
+## Available Apps
+
+### [BrowserSelector](https://github.com/ruslan-rv-ua/BrowserSelector)
+
+A lightweight portable Windows app that intercepts link clicks and asks you which browser to open them with. Set it as your default browser and take full control over how URLs are handled.
+
+**Key features:**
+- Presents a menu every time a link is clicked — choose any browser or shell command
+- Configurable auto-open timer (1–10 sec) that falls back to your preferred browser automatically
+- Any shell command can be added as an option (e.g. copy to clipboard, open in incognito, pipe to a script)
+- Full keyboard navigation (arrows, numbers 1–9, Enter, Escape)
+- Screen reader support (NVDA, Windows Narrator)
+- Interface available in 9 languages, auto-detected from system locale
+- Portable single executable + JSON config file
 
 ```powershell
 scoop install browserselector
+```
+
+---
+
+### [QuickSnippets](https://github.com/ruslan-rv-ua/quick-snippets)
+
+A portable text snippet launcher — press a global hotkey from any application, search by title, and copy the snippet to the clipboard in seconds. No cloud, no telemetry, no installer.
+
+**Key features:**
+- Global hotkey **Ctrl+Alt+Space** opens the window from anywhere
+- Fuzzy search filters snippets as you type
+- Sensitive snippets can be encrypted locally with AES-256-GCM (keys never leave your device)
+- Fully keyboard-driven; mouse is optional
+- Screen reader support (NVDA, JAWS, Windows Narrator)
+- Light and dark themes, auto-switched based on system preference
+- Portable — the entire app lives in one folder; database and settings sit next to the executable
+- System tray icon for quick access; auto-hides when you switch away
+
+```powershell
 scoop install quick-snippets
 ```
 
-### Update applications
+---
+
+## Update all apps
 
 ```powershell
-scoop update browserselector
-scoop update quick-snippets
+scoop update *
 ```
-
-## Available Applications
-
-| Application | Description |
-|-------------|-------------|
-| [browserselector](https://github.com/ruslan-rv-ua/BrowserSelector) | Accessible Windows browser selector - choose which browser opens your links |
-| [quick-snippets](https://github.com/ruslan-rv-ua/quick-snippets) | Portable desktop app for quick access to text snippets |
-
-## About Browser Selector
-
-Browser Selector is a portable Windows application that allows you to easily choose which browser to open a link with. Key features:
-
-- **Accessibility first!** Works with NVDA and Windows Narrator
-- **Multi-language** - Automatic UI language detection
-- **Portable** - Single .exe file with JSON configuration
-- **Quick Navigation** - Use Arrow keys, Enter, Escape, and numbers 1-9
-- **Auto-Open** - Default browser opens automatically after configurable countdown
-
-## Contributing
-
-Feel free to submit issues and pull requests.
-
-## License
-
-MIT License
