@@ -1,4 +1,4 @@
-name: Update Manifest
+name: Update BrowserSelector manifest
 
 on:
   repository_dispatch:
