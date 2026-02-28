@@ -48,6 +48,9 @@ jobs:
       - name: Validate manifests with Scoop
         shell: pwsh
         run: |
+          # Reload PATH so Scoop installed in the previous step is accessible
+          $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH", "User") + ";" + $env:PATH
+
           # Add this bucket locally
           scoop bucket add local $PWD
           
