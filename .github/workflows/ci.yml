@@ -58,17 +58,20 @@ jobs:
           # Перезавантажуємо PATH щоб Scoop встановлений у попередньому кроці був доступний
           $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH", "User") + ";" + $env:PATH
 
-          # Додаємо поточну директорію як локальний bucket
-          scoop bucket add local $PWD
-          
+          # scoop bucket add не підтримує локальні шляхи (потрібен Git URL),
+          # тому вручну копіюємо папку bucket у директорію Scoop buckets
+          $scoopBucketPath = "$env:USERPROFILE\scoop\buckets\local"
+          New-Item -ItemType Directory -Force -Path $scoopBucketPath | Out-Null
+          Copy-Item -Path "$PWD\bucket" -Destination "$scoopBucketPath\bucket" -Recurse -Force
+
           $hasErrors = $false
           
           Get-ChildItem bucket/*.json | ForEach-Object {
             $name = $_.BaseName
             Write-Host "`nValidating manifest: $name"
             
-            # scoop info перевіряє структуру маніфесту
-            $info = scoop info $name 2>&1
+            # scoop info перевіряє структуру маніфесту; вказуємо bucket/name
+            $info = scoop info "local/$name" 2>&1
             if ($LASTEXITCODE -eq 0) {
               Write-Host "  ✓ Valid manifest structure" -ForegroundColor Green
               

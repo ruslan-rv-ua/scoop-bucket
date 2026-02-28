@@ -21,9 +21,13 @@
       "QuickSnippets"
     ]
   ],
+  "pre_install": [
+    "if (!(Test-Path \"$dir\\settings.json\")) { New-Item \"$dir\\settings.json\" -ItemType File | Out-Null }",
+    "if (!(Test-Path \"$dir\\snippets.db\")) { New-Item \"$dir\\snippets.db\" -ItemType File | Out-Null }"
+  ],
   "persist": [
-    "snippets.db",
-    "settings.json"
+    "settings.json",
+    "snippets.db"
   ],
   "checkver": {
     "github": "https://github.com/ruslan-rv-ua/quick-snippets"
