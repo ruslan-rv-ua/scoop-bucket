@@ -22,8 +22,18 @@
     ]
   ],
   "pre_install": [
-    "if (!(Test-Path \"$dir\\settings.json\")) { New-Item \"$dir\\settings.json\" -ItemType File | Out-Null }",
-    "if (!(Test-Path \"$dir\\snippets.db\")) { New-Item \"$dir\\snippets.db\" -ItemType File | Out-Null }"
+    "# Ensure persisted paths are files, not directories.",
+    "# Scoop creates directory stubs for persist entries that don't exist in",
+    "# the archive; the app detects this at runtime, but pre_install keeps",
+    "# the first launch clean without any recovery dialog.",
+    "if (!(Test-Path \"$persist_dir\\settings.json\") -or (Get-Item \"$persist_dir\\settings.json\").PSIsContainer) {",
+    "    if (Test-Path \"$persist_dir\\settings.json\") { Remove-Item -Recurse -Force \"$persist_dir\\settings.json\" }",
+    "    '{}' | Set-Content \"$dir\\settings.json\" -Encoding UTF8",
+    "}",
+    "if (!(Test-Path \"$persist_dir\\snippets.db\") -or (Get-Item \"$persist_dir\\snippets.db\").PSIsContainer) {",
+    "    if (Test-Path \"$persist_dir\\snippets.db\") { Remove-Item -Recurse -Force \"$persist_dir\\snippets.db\" }",
+    "    [System.IO.File]::WriteAllBytes(\"$dir\\snippets.db\", @())",
+    "}"
   ],
   "persist": [
     "settings.json",
