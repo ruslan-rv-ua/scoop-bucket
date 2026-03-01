@@ -170,5 +170,4 @@ jobs:
 | URL     | ${{ steps.payload.outputs.URL }} |
 | SHA256  | \`${{ steps.payload.outputs.HASH }}\` |
 
-CI буде автоматично перевірено після відкриття PR." \
-            --label automated
+CI буде автоматично перевірено після відкриття PR."
