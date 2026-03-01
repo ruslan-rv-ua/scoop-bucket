@@ -131,39 +131,44 @@ jobs:
 
       # Крок 6: Комітимо зміни і пушимо гілку у репозиторій
       - name: Commit and push branch
+        id: commit
         run: |
           git add "bucket/${{ steps.payload.outputs.APP }}.json"
           
           # Перевіряємо чи є реальні зміни
           if git diff --staged --quiet; then
             echo "No changes to commit — manifest is already up to date"
+            echo "CHANGED=false" >> $GITHUB_OUTPUT
             exit 0
           fi
           
           git commit -m "Update ${{ steps.payload.outputs.APP }} to ${{ steps.payload.outputs.VERSION }}"
           git push origin "${{ steps.branch.outputs.BRANCH }}"
+          echo "CHANGED=true" >> $GITHUB_OUTPUT
 
       # Крок 7: Відкриваємо Pull Request з гілки update/{app}-{version} в main.
       # CI запуститься автоматично на цьому PR і перевірить маніфест.
       # Після успішної перевірки PR можна змержити.
+      #
+      # Використовуємо gh pr create замість peter-evans/create-pull-request:
+      # на відміну від тієї дії, gh pr create просто відкриває PR для вже
+      # існуючої запушеної гілки і не чіпає working directory.
       - name: Open Pull Request
-        uses: peter-evans/create-pull-request@v6
-        with:
-          # Гілка з якої відкриваємо PR (вже існує, ми її щойно запушили)
-          branch: ${{ steps.branch.outputs.BRANCH }}
-          # Гілка в яку мержимо
-          base: main
-          title: "Update ${{ steps.payload.outputs.APP }} to ${{ steps.payload.outputs.VERSION }}"
-          body: |
-            Automated manifest update for **${{ steps.payload.outputs.APP }}**.
+        if: steps.commit.outputs.CHANGED == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create \
+            --base main \
+            --head "${{ steps.branch.outputs.BRANCH }}" \
+            --title "Update ${{ steps.payload.outputs.APP }} to ${{ steps.payload.outputs.VERSION }}" \
+            --body "Automated manifest update for **${{ steps.payload.outputs.APP }}**.
 
-            | Field   | Value |
-            |---------|-------|
-            | Version | `${{ steps.payload.outputs.VERSION }}` |
-            | URL     | ${{ steps.payload.outputs.URL }} |
-            | SHA256  | `${{ steps.payload.outputs.HASH }}` |
+| Field   | Value |
+|---------|-------|
+| Version | \`${{ steps.payload.outputs.VERSION }}\` |
+| URL     | ${{ steps.payload.outputs.URL }} |
+| SHA256  | \`${{ steps.payload.outputs.HASH }}\` |
 
-            CI буде автоматично перевірено після відкриття PR.
-          # Автоматично мержити PR якщо CI пройшов успішно.
-          # Видали цей рядок якщо хочеш мержити вручну.
-          labels: automated
+CI буде автоматично перевірено після відкриття PR." \
+            --label automated
