@@ -65,97 +65,22 @@ scoop-bucket/
 
 ### 2. У репозиторії застосунку
 
-Створи `.github/workflows/release.yml` у репозиторії застосунку:
+Скопіюй [`examples/release-template.yml`](examples/release-template.yml) у `.github/workflows/release.yml` репозиторію застосунку.
 
-```yaml
-name: Release
+Після копіювання зроби три речі:
 
-on:
-  push:
-    tags:
-      - 'v*'
-
-env:
-  # Єдине місце де треба змінити ім'я при використанні цього шаблону.
-  # Регістр важливий: саме так буде названо ZIP-архів.
-  APP_NAME: MyApp
-
-permissions:
-  contents: write
-
-jobs:
-  build:
-    runs-on: windows-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      # TODO: додай сюди кроки збірки свого застосунку.
-      # Де буде результат збірки — залежить від проєкту, жодних вимог немає.
-
-      - name: Get version and app info
-        id: info
-        shell: bash
-        run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
-          APP_ID=$(echo "${{ env.APP_NAME }}" | tr '[:upper:]' '[:lower:]')
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-          echo "APP_ID=$APP_ID" >> $GITHUB_OUTPUT
-
-      - name: Create release package
-        id: package
-        shell: pwsh
-        run: |
-          $appName = "${{ env.APP_NAME }}"
-          $version = "${{ steps.info.outputs.VERSION }}"
-          $packageDir = $appName
-          $zipName = "$appName-$version-windows-x64.zip"
-
-          New-Item -ItemType Directory -Force -Path $packageDir
-
-          # TODO: скопіюй сюди файли які мають потрапити в ZIP.
-          # Шляхи залежать від твого проєкту — бери звідки треба.
-          # Copy-Item "path\to\file.exe" -Destination $packageDir
-          # Copy-Item "path\to\config.json" -Destination $packageDir
-
-          Compress-Archive -Path $packageDir -DestinationPath $zipName -Force
-
-          $hash = (Get-FileHash -Path $zipName -Algorithm SHA256).Hash.ToLower()
-          $hash | Out-File -FilePath "$zipName.sha256" -NoNewline -Encoding ascii
-
-          echo "HASH=$hash" >> $env:GITHUB_OUTPUT
-          echo "ZIP_NAME=$zipName" >> $env:GITHUB_OUTPUT
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            ${{ env.APP_NAME }}-*.zip
-            ${{ env.APP_NAME }}-*.zip.sha256
-          generate_release_notes: true
-          prerelease: ${{ contains(github.ref, '-alpha') || contains(github.ref, '-beta') || contains(github.ref, '-rc') }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # Пропускається для pre-release тегів (-alpha, -beta, -rc)
-      - name: Update Scoop bucket
-        if: ${{ !contains(github.ref, '-alpha') && !contains(github.ref, '-beta') && !contains(github.ref, '-rc') }}
-        uses: peter-evans/repository-dispatch@v3
-        with:
-          token: ${{ secrets.SCOOP_BUCKET_TOKEN }}
-          repository: ruslan-rv-ua/scoop-bucket
-          event-type: update-${{ steps.info.outputs.APP_ID }}
-          client-payload: |
-            {
-              "app": "${{ steps.info.outputs.APP_ID }}",
-              "version": "${{ steps.info.outputs.VERSION }}",
-              "hash": "${{ steps.package.outputs.HASH }}",
-              "url": "https://github.com/${{ github.repository }}/releases/download/v${{ steps.info.outputs.VERSION }}/${{ steps.package.outputs.ZIP_NAME }}"
-            }
-```
+1. **`APP_NAME`** — зміни на ім'я свого застосунку (єдиний обов'язковий рядок, всі інші частини workflow генеруються з нього автоматично).
+2. **Кроки збірки** — заміни TODO-блок «ЗБІРКА» на кроки збірки свого проєкту. У шаблоні є готові коментовані приклади для MSYS2/make, Rust і Node.js.
+3. **Файли у ZIP** — у кроці `Create release package` заміни TODO-рядки `Copy-Item` на реальні шляхи до файлів свого застосунку.
 
 `APP_NAME` використовується скрізь у workflow: як ім'я ZIP-архіву і як ідентифікатор застосунку при відправці події в scoop-bucket (приводиться до lowercase автоматично).
+
+> **Що містить шаблон:**
+> - `workflow_dispatch` з двома полями: `version` (рядок, обов'язковий) і `prerelease` (прапорець, необов'язковий)
+> - При ручному запуску версія береться з `inputs.version`, при тег-тригері — з тегу автоматично
+> - `draft: false` — реліз публікується одразу, без чернетки
+> - Pre-release: автоматично за суфіксом тегу (`-alpha`/`-beta`/`-rc`) **і** за ручним прапорцем
+> - Умова `Update Scoop bucket` враховує обидва способи позначення pre-release
 
 ### 3. Як створити SCOOP_BUCKET_TOKEN
 
@@ -248,7 +173,7 @@ git push origin v1.2.3
 ## Checklist для нового застосунку
 
 - [ ] Створено `bucket/{appname}.json` у scoop-bucket
-- [ ] Створено `release.yml` у репозиторії застосунку, змінено `APP_NAME`
+- [ ] Скопійовано [`examples/release-template.yml`](examples/release-template.yml) як `.github/workflows/release.yml` у репозиторій застосунку, змінено `APP_NAME`, замінено TODO-кроки збірки і файли ZIP
 - [ ] Додано секрет `SCOOP_BUCKET_TOKEN` у репозиторій застосунку
 - [ ] Увімкнено **Allow auto-merge** у scoop-bucket (якщо ще не зроблено)
 - [ ] Зроблено тестовий реліз з тегом типу `v0.1.0-alpha` (bucket не чіпає, але перевіряє збірку)

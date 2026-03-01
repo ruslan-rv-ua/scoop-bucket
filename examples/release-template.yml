@@ -1,0 +1,186 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# release-template.yml — шаблон для GitHub Actions release workflow
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# ВИКОРИСТАННЯ
+#   1. Скопіюй цей файл у .github/workflows/release.yml репозиторію застосунку.
+#   2. Зміни APP_NAME на ім'я свого застосунку (єдине обов'язкове місце).
+#   3. Заміни TODO-блоки: збірка і список файлів для ZIP.
+#   Решта — вже готова до роботи.
+#
+# ЩО ВІДБУВАЄТЬСЯ ПРИ ЗАПУСКУ
+#   push тегу v*  →  збірка  →  ZIP + SHA256  →  GitHub Release  →
+#   →  repository_dispatch  →  scoop-bucket автоматично оновлює маніфест
+#
+# ТРИГЕРИ
+#   • push тегу  v*        — основний шлях: git tag v1.2.3 && git push --tags
+#   • workflow_dispatch    — ручний перезапуск (наприклад, якщо автоматичний
+#                            завершився з помилкою, а код вже виправлено)
+#
+# PRE-RELEASE
+#   Теги з суфіксами -alpha, -beta, -rc автоматично позначаються як pre-release.
+#   Крім того, при ручному запуску можна явно поставити прапорець prerelease.
+#   Для pre-release кроки "Update Scoop bucket" пропускається.
+#
+# НЕОБХІДНІ СЕКРЕТИ
+#   SCOOP_BUCKET_TOKEN  — Fine-grained PAT з правом Contents: write на scoop-bucket
+#                         Докладно: DEVELOPMENT.md → "Як додати новий застосунок"
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Версія (без "v", наприклад: 1.2.3)'
+        required: true
+        type: string
+      prerelease:
+        description: 'Позначити як pre-release?'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  # ─── ЄДИНЕ МІСЦЕ ДЕ ТРЕБА ЗМІНИТИ ІМ'Я ───────────────────────────────────
+  # Регістр важливий: це ім'я буде використано в назві ZIP-архіву.
+  # APP_ID (для event-type у scoop-bucket) буде автоматично приведено до lowercase.
+  APP_NAME: MyApp
+  # ──────────────────────────────────────────────────────────────────────────
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ── ЗБІРКА ───────────────────────────────────────────────────────────────
+      # TODO: додай сюди кроки збірки свого застосунку.
+      #
+      # Приклад для C/C++ з MSYS2 + make:
+      #
+      #   - name: Setup MSYS2
+      #     uses: msys2/setup-msys2@v2
+      #     with:
+      #       msystem: MINGW64
+      #       update: true
+      #       install: >-
+      #         mingw-w64-x86_64-gcc
+      #         make
+      #
+      #   - name: Build Release
+      #     shell: msys2 {0}
+      #     run: |
+      #       make release
+      #
+      # Приклад для Rust (з кешуванням):
+      #
+      #   - name: Install Rust stable toolchain
+      #     uses: dtolnay/rust-toolchain@stable
+      #     with:
+      #       targets: x86_64-pc-windows-msvc
+      #
+      #   - name: Cache Rust build artifacts
+      #     uses: Swatinem/rust-cache@v2
+      #
+      #   - name: Build Release
+      #     run: cargo build --release
+      #
+      # Приклад для Node.js / Electron:
+      #
+      #   - name: Set up Node.js
+      #     uses: actions/setup-node@v4
+      #     with:
+      #       node-version: 'lts/*'
+      #       cache: 'npm'
+      #
+      #   - name: Install dependencies and build
+      #     run: |
+      #       npm ci
+      #       npm run build
+      #
+      # ─────────────────────────────────────────────────────────────────────────
+
+      # При push-тегу: VERSION береться з тегу (refs/tags/v1.2.3 → 1.2.3)
+      # При ручному запуску: VERSION береться з inputs.version
+      - name: Get version and app info
+        id: info
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION=${GITHUB_REF#refs/tags/v}
+          fi
+          APP_ID=$(echo "${{ env.APP_NAME }}" | tr '[:upper:]' '[:lower:]')
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "APP_ID=$APP_ID" >> $GITHUB_OUTPUT
+          echo "Building ${{ env.APP_NAME }} version $VERSION (app id: $APP_ID)"
+
+      - name: Create release package
+        id: package
+        shell: pwsh
+        run: |
+          $appName = "${{ env.APP_NAME }}"
+          $version = "${{ steps.info.outputs.VERSION }}"
+          $packageDir = $appName
+          $zipName = "$appName-$version-windows-x64.zip"
+
+          New-Item -ItemType Directory -Force -Path $packageDir
+
+          # ── TODO: скопіюй сюди файли які мають потрапити в ZIP ─────────────
+          # Шляхи залежать від твого проєкту.
+          # Copy-Item "bin\$appName.exe" -Destination $packageDir
+          # Copy-Item "LICENSE"          -Destination $packageDir
+          # Copy-Item "README.md"        -Destination $packageDir
+          # Copy-Item "config.json"      -Destination $packageDir
+          # ────────────────────────────────────────────────────────────────────
+
+          Compress-Archive -Path $packageDir -DestinationPath $zipName -Force
+
+          $hash = (Get-FileHash -Path $zipName -Algorithm SHA256).Hash.ToLower()
+          $hash | Out-File -FilePath "$zipName.sha256" -NoNewline -Encoding ascii
+
+          Write-Host "Package: $zipName"
+          Write-Host "SHA256:  $hash"
+
+          echo "HASH=$hash" >> $env:GITHUB_OUTPUT
+          echo "ZIP_NAME=$zipName" >> $env:GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ${{ env.APP_NAME }}-*.zip
+            ${{ env.APP_NAME }}-*.zip.sha256
+          generate_release_notes: true
+          draft: false
+          # Pre-release якщо: тег містить -alpha/-beta/-rc АБО вручну позначено
+          prerelease: ${{ inputs.prerelease || contains(github.ref, '-alpha') || contains(github.ref, '-beta') || contains(github.ref, '-rc') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Оновлення scoop-bucket пропускається для pre-release (будь-якого виду)
+      - name: Update Scoop bucket
+        if: ${{ !inputs.prerelease && !contains(github.ref, '-alpha') && !contains(github.ref, '-beta') && !contains(github.ref, '-rc') }}
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.SCOOP_BUCKET_TOKEN }}
+          repository: ruslan-rv-ua/scoop-bucket
+          event-type: update-${{ steps.info.outputs.APP_ID }}
+          client-payload: |
+            {
+              "app": "${{ steps.info.outputs.APP_ID }}",
+              "version": "${{ steps.info.outputs.VERSION }}",
+              "hash": "${{ steps.package.outputs.HASH }}",
+              "url": "https://github.com/${{ github.repository }}/releases/download/v${{ steps.info.outputs.VERSION }}/${{ steps.package.outputs.ZIP_NAME }}"
+            }
