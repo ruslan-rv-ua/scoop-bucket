@@ -157,17 +157,19 @@ jobs:
         if: steps.commit.outputs.CHANGED == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_BODY: |
+            Automated manifest update for **${{ steps.payload.outputs.APP }}**.
+
+            | Field   | Value |
+            |---------|-------|
+            | Version | `${{ steps.payload.outputs.VERSION }}` |
+            | URL     | ${{ steps.payload.outputs.URL }} |
+            | SHA256  | `${{ steps.payload.outputs.HASH }}` |
+
+            CI буде автоматично перевірено після відкриття PR.
         run: |
           gh pr create \
             --base main \
             --head "${{ steps.branch.outputs.BRANCH }}" \
             --title "Update ${{ steps.payload.outputs.APP }} to ${{ steps.payload.outputs.VERSION }}" \
-            --body "Automated manifest update for **${{ steps.payload.outputs.APP }}**.
-
-| Field   | Value |
-|---------|-------|
-| Version | \`${{ steps.payload.outputs.VERSION }}\` |
-| URL     | ${{ steps.payload.outputs.URL }} |
-| SHA256  | \`${{ steps.payload.outputs.HASH }}\` |
-
-CI буде автоматично перевірено після відкриття PR."
+            --body "$PR_BODY"
