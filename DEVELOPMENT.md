@@ -11,11 +11,11 @@
             ├─ публікація GitHub Release
             └─ repository_dispatch → scoop-bucket
                    └─ update-scoop-manifest.yml
-                        ├─ створює гілку update/{app}-{version}
+                        ├─ перевіряє що URL доступний і SHA256 збігається
                         ├─ оновлює bucket/{app}.json
-                        └─ відкриває Pull Request
+                        └─ пушить напряму в main
                                └─ ci.yml (перевірка маніфесту)
-                                    └─ auto-merge якщо CI ✓
+                                    └─ при помилці — автоматичний revert
 ```
 
 ## Файли у цьому репозиторії
@@ -27,7 +27,7 @@ scoop-bucket/
 │   └─ quick-snippets.json
 └─ .github/
     └─ workflows/
-        ├─ ci.yml                     ← перевірка маніфестів + автомерж
+        ├─ ci.yml                     ← перевірка маніфестів + revert при помилці
         └─ update-scoop-manifest.yml  ← універсальний оновлювач
 ```
 
@@ -130,13 +130,6 @@ GitHub → репозиторій застосунку → **Settings** → **Se
 
 Після цього `${{ secrets.SCOOP_BUCKET_TOKEN }}` у `release.yml` автоматично підставить потрібне значення під час запуску workflow. Саме значення токена ніколи не з'являється у логах.
 
-### 5. Увімкнути автомерж у scoop-bucket
-
-- GitHub → scoop-bucket → **Settings → General → Pull Requests**
-- Увімкнути **Allow auto-merge**
-
-Без цього CI буде перевіряти PR, але мержити доведеться вручну.
-
 ---
 
 ## Як виглядає процес після push тегу
@@ -151,11 +144,11 @@ git push origin v1.2.3
 3. Пакує `MyApp-1.2.3-windows-x64.zip` + рахує SHA256
 4. Публікує GitHub Release з автогенерованими release notes
 5. Надсилає `repository_dispatch` з `event-type: update-myapp` у scoop-bucket
-6. `update-scoop-manifest.yml` створює гілку `update/myapp-1.2.3`
-7. Оновлює `bucket/myapp.json` (version, url, hash)
-8. Відкриває PR: _"Update myapp to 1.2.3"_
-9. `ci.yml` перевіряє JSON-синтаксис і структуру через `scoop info`
-10. Якщо ✓ — автомерж у main через squash commit
+6. `update-scoop-manifest.yml` завантажує ZIP і перевіряє SHA256 — якщо не збігається, зупиняється з помилкою
+7. Оновлює `bucket/myapp.json` (version, url, hash) і пушить напряму в main
+8. `ci.yml` перевіряє JSON-синтаксис і структуру маніфесту через `scoop info`
+9. Якщо ✓ — готово, маніфест у main актуальний
+10. Якщо ✗ — CI автоматично робить revert коміту і сповіщає про помилку
 
 Для тегів з `-alpha`, `-beta`, `-rc` — GitHub Release позначається як pre-release, крок оновлення bucket пропускається.
 
@@ -175,17 +168,18 @@ git push origin v1.2.3
 - [ ] Створено `bucket/{appname}.json` у scoop-bucket
 - [ ] Скопійовано [`examples/release-template.yml`](examples/release-template.yml) як `.github/workflows/release.yml` у репозиторій застосунку, змінено `APP_NAME`, замінено TODO-кроки збірки і файли ZIP
 - [ ] Додано секрет `SCOOP_BUCKET_TOKEN` у репозиторій застосунку
-- [ ] Увімкнено **Allow auto-merge** у scoop-bucket (якщо ще не зроблено)
-- [ ] Зроблено тестовий реліз з тегом типу `v0.1.0-alpha` (bucket не чіпає, але перевіряє збірку)
-- [ ] Зроблено повноцінний реліз, перевірено що PR у scoop-bucket відкрився і змержився
+- [ ] Зроблено тестовий реліз з тегом типу `v0.1.0-alpha` (bucket не чіпає, але перевіряє збірку і пакування)
+- [ ] Зроблено повноцінний реліз, перевірено що `bucket/myapp.json` у main оновився автоматично
 
 ---
 
 ## Можливі проблеми
 
-**CI падає з "Invalid manifest"** — перевір структуру JSON, особливо поле `architecture."64bit"`. Запусти `scoop info` локально.
+**CI падає з "Invalid manifest" і робить revert** — перевір структуру JSON, особливо поле `architecture."64bit"`. Запусти `scoop info` локально. Після виправлення запусти оновлення вручну через **Actions → Update Scoop manifest → Run workflow**.
 
-**PR не мержиться автоматично** — перевір що в scoop-bucket увімкнено Allow auto-merge і що `ci.yml` має `pull-requests: write`.
+**`update-scoop-manifest.yml` падає з "Hash mismatch"** — SHA256 що передається у `repository_dispatch` не збігається з реальним вмістом файлу за вказаним URL. Перевір як рахується хеш у `release.yml` застосунку.
+
+**`update-scoop-manifest.yml` падає з "Download failed"** — URL недоступний. Можливо GitHub Release ще не опублікований на момент запуску dispatch. Спробуй запустити оновлення вручну через **Actions → Update Scoop manifest → Run workflow** через кілька хвилин.
 
 **`repository_dispatch` не спрацьовує** — перевір що токен `SCOOP_BUCKET_TOKEN` не прострочений і має доступ до scoop-bucket з правами Contents: write.
 

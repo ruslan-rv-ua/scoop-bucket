@@ -4,108 +4,94 @@ on:
   push:
     paths:
       - 'bucket/*.json'
-  pull_request:
-    paths:
-      - 'bucket/*.json'
 
 permissions:
-  contents: write       # Потрібно для автомержу
-  pull-requests: write  # Потрібно для автомержу
+  contents: write  # Потрібно для revert коміту при провалі перевірки
 
 jobs:
   validate:
     runs-on: windows-latest
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Крок 1: Перевіряємо синтаксис JSON у всіх маніфестах
-      - name: Validate JSON syntax
-        shell: pwsh
-        run: |
-          $hasErrors = $false
-          
-          Get-ChildItem bucket/*.json | ForEach-Object {
-            $name = $_.Name
-            Write-Host "Validating: $name"
-            
-            try {
-              $content = Get-Content $_.FullName -Raw
-              $null = $content | ConvertFrom-Json
-              Write-Host "  ✓ Valid JSON syntax" -ForegroundColor Green
-            } catch {
-              Write-Host "  ✗ Invalid JSON: $_" -ForegroundColor Red
-              $hasErrors = $true
-            }
-          }
-          
-          if ($hasErrors) {
-            exit 1
-          }
-
-      # Крок 2: Встановлюємо Scoop щоб перевірити структуру маніфестів
+      # Встановлюємо Scoop для перевірки структури маніфестів
       - name: Install Scoop
         shell: pwsh
         run: |
           Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
           Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression
 
-      # Крок 3: Перевіряємо структуру маніфестів через сам Scoop
-      - name: Validate manifests with Scoop
+      # Перевіряємо синтаксис JSON і структуру маніфестів через scoop info.
+      # Окрема перевірка JSON не потрібна — scoop info однаково впаде при невалідному JSON,
+      # але з менш читабельним повідомленням, тому перевіряємо JSON першим.
+      - name: Validate manifests
         shell: pwsh
         run: |
-          # Перезавантажуємо PATH щоб Scoop встановлений у попередньому кроці був доступний
           $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH", "User") + ";" + $env:PATH
 
-          # scoop bucket add не підтримує локальні шляхи (потрібен Git URL),
-          # тому вручну копіюємо папку bucket у директорію Scoop buckets
+          # scoop bucket add не підтримує локальні шляхи — копіюємо вручну
           $scoopBucketPath = "$env:USERPROFILE\scoop\buckets\local"
           New-Item -ItemType Directory -Force -Path $scoopBucketPath | Out-Null
           Copy-Item -Path "$PWD\bucket" -Destination "$scoopBucketPath\bucket" -Recurse -Force
 
           $hasErrors = $false
-          
+
           Get-ChildItem bucket/*.json | ForEach-Object {
             $name = $_.BaseName
-            Write-Host "`nValidating manifest: $name"
-            
-            # scoop info перевіряє структуру маніфесту; вказуємо bucket/name
+            Write-Host "`nValidating: $name"
+
+            # Перевірка синтаксису JSON
+            try {
+              $manifest = Get-Content $_.FullName -Raw | ConvertFrom-Json
+              Write-Host "  ✓ Valid JSON"
+            } catch {
+              Write-Host "  ✗ Invalid JSON: $_" -ForegroundColor Red
+              $hasErrors = $true
+              return
+            }
+
+            # Перевірка структури маніфесту через scoop
             $info = scoop info "local/$name" 2>&1
             if ($LASTEXITCODE -eq 0) {
               Write-Host "  ✓ Valid manifest structure" -ForegroundColor Green
-              
-              # Виводимо ключову інформацію з маніфесту для логу
-              $manifest = Get-Content $_.FullName | ConvertFrom-Json
-              Write-Host "    Version: $($manifest.version)"
+              Write-Host "    Version:  $($manifest.version)"
               Write-Host "    Homepage: $($manifest.homepage)"
             } else {
               Write-Host "  ✗ Invalid manifest: $info" -ForegroundColor Red
               $hasErrors = $true
             }
           }
-          
+
           if ($hasErrors) {
             exit 1
           }
-          
+
           Write-Host "`n✓ All manifests validated successfully!" -ForegroundColor Green
 
-  # Окремий job для автомержу — запускається тільки для PR,
-  # тільки якщо PR відкритий ботом (автоматичне оновлення),
-  # і тільки після успішного проходження validate.
-  auto-merge:
-    needs: validate           # Чекаємо поки validate успішно завершиться
-    if: |
-      github.event_name == 'pull_request' &&
-      github.actor == 'github-actions[bot]'
+  # Якщо validate впав — робимо revert останнього коміту в main.
+  # Це захищає користувачів від встановлення маніфесту з невалідною структурою.
+  revert-on-failure:
+    needs: validate
+    if: failure()
     runs-on: ubuntu-latest
-    
+
     steps:
-      # Автоматично мержимо PR якщо він відкритий ботом і CI пройшов
-      - name: Auto-merge bot PR
-        uses: peter-evans/enable-pull-request-automerge@v3
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          pull-request-number: ${{ github.event.pull_request.number }}
-          merge-method: squash  # squash — один чистий коміт замість merge commit
+          fetch-depth: 2  # Потрібно щоб git revert мав доступ до батьківського коміту
+
+      - name: Revert last commit
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          COMMIT=$(git rev-parse HEAD)
+          echo "Reverting commit: $COMMIT"
+
+          git revert --no-edit HEAD
+          git push origin main
+
+          echo "✓ Reverted. Check the validation log for details."
