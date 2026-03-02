@@ -11,7 +11,7 @@
   "architecture": {
     "64bit": {
       "url": "https://github.com/ruslan-rv-ua/quick-snippets/releases/download/v0.1.1/quick-snippets-0.1.1-windows-x64.zip",
-      "hash": "0733bdec8c75f1dc7750905aac8a988de899110cb1742b02bd77884b566ba2f9"
+      "hash": "f02ebe601912f553c3ddb78fcfe757f8beb12b5a7098c505fb05f279a069b5ab"
     }
   },
   "bin": "quick-snippets.exe",
