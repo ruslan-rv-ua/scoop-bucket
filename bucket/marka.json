@@ -19,6 +19,7 @@
       "hash": "d807ead6c966ebc3147759a125ea51fbd53a3a35da257b0d956d419bcacdf049"
     }
   },
+  "extract_dir": "marka",
   "bin": "marka.exe",
   "shortcuts": [
     [
