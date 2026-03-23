@@ -27,9 +27,8 @@
       "Marka"
     ]
   ],
-  "persist": [
-    "settings.json"
-  ],
+  "pre_install": "if (!(Test-Path \"$dir\\settings.json\")) { '{}' | Set-Content \"$dir\\settings.json\" -Encoding utf8 }",
+  "persist": "settings.json",
   "checkver": {
     "github": "https://github.com/ruslan-rv-ua/marka"
   },
