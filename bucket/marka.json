@@ -16,14 +16,19 @@
   "architecture": {
     "64bit": {
       "url": "https://github.com/ruslan-rv-ua/marka/releases/download/v0.1.0/marka-0.1.0-windows-x64.zip",
-      "hash": "placeholder_will_be_auto_updated"
+      "hash": "d807ead6c966ebc3147759a125ea51fbd53a3a35da257b0d956d419bcacdf049"
     }
   },
   "bin": "marka.exe",
   "shortcuts": [
-    ["marka.exe", "Marka"]
+    [
+      "marka.exe",
+      "Marka"
+    ]
   ],
-  "persist": ["settings.json"],
+  "persist": [
+    "settings.json"
+  ],
   "checkver": {
     "github": "https://github.com/ruslan-rv-ua/marka"
   },
