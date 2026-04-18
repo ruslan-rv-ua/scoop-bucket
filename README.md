@@ -49,6 +49,24 @@ scoop install quick-snippets
 
 ---
 
+### [Axygen Shot](https://github.com/ruslan-rv-ua/axygen-shot)
+
+A portable Windows CLI screenshot tool designed for blind developers. Captures
+a single window to PNG, copies to clipboard, with audio feedback.
+
+**Key features:**
+- Single-window capture via PrintWindow/BitBlt
+- Watch mode with global hotkey and system tray icon
+- Dual binaries: `shot.exe` (CLI) + `shot-watch.exe` (tray daemon)
+- Audio feedback via Windows system sounds
+- Full screen reader support
+
+```powershell
+scoop install axygen-shot
+```
+
+---
+
 ## Update all apps
 
 ```powershell
