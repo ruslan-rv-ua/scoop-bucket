@@ -1,12 +1,12 @@
 {
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Portable Windows CLI screenshot tool for blind developers",
   "homepage": "https://github.com/ruslan-rv-ua/axygen-shot",
   "license": "MIT",
   "architecture": {
     "64bit": {
-      "url": "https://github.com/ruslan-rv-ua/axygen-shot/releases/download/v0.1.0/axygen-shot-0.1.0-windows-x86_64.zip",
-      "hash": "8cb8909623a31b60a79c53a78ebb1b5bef5a58bb66e3ac72f764cdc7bcc818d5"
+      "url": "https://github.com/ruslan-rv-ua/axygen-shot/releases/download/v0.2.0/axygen-shot-0.2.0-windows-x86_64.zip",
+      "hash": "e8335e565564cc97b3a5c4e49414196a004f4097de8816df3d80f2851805aba4"
     }
   },
   "bin": [
