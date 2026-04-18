@@ -10,8 +10,7 @@
     }
   },
   "bin": [
-    "shot.exe",
-    "shot-watch.exe"
+    "shot.exe"
   ],
   "checkver": "github",
   "autoupdate": {
