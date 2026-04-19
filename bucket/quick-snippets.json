@@ -22,22 +22,13 @@
     ]
   ],
   "pre_install": [
-    "# Ensure persisted paths are files, not directories.",
-    "# Scoop creates directory stubs for persist entries that don't exist in",
-    "# the archive; the app detects this at runtime, but pre_install keeps",
-    "# the first launch clean without any recovery dialog.",
-    "if (!(Test-Path \"$persist_dir\\settings.json\") -or (Get-Item \"$persist_dir\\settings.json\").PSIsContainer) {",
-    "    if (Test-Path \"$persist_dir\\settings.json\") { Remove-Item -Recurse -Force \"$persist_dir\\settings.json\" }",
-    "    '{}' | Set-Content \"$dir\\settings.json\" -Encoding UTF8",
-    "}",
-    "if (!(Test-Path \"$persist_dir\\snippets.db\") -or (Get-Item \"$persist_dir\\snippets.db\").PSIsContainer) {",
-    "    if (Test-Path \"$persist_dir\\snippets.db\") { Remove-Item -Recurse -Force \"$persist_dir\\snippets.db\" }",
-    "    [System.IO.File]::WriteAllBytes(\"$dir\\snippets.db\", @())",
+    "# Ensure quick-snippets-data exists as a real directory, not a Scoop stub.",
+    "if (!(Test-Path \"$persist_dir\\quick-snippets-data\")) {",
+    "    New-Item -ItemType Directory -Force -Path \"$dir\\quick-snippets-data\" | Out-Null",
     "}"
   ],
   "persist": [
-    "settings.json",
-    "snippets.db"
+    "quick-snippets-data"
   ],
   "checkver": {
     "github": "https://github.com/ruslan-rv-ua/quick-snippets"
@@ -45,7 +36,7 @@
   "autoupdate": {
     "architecture": {
       "64bit": {
-        "url": "https://github.com/ruslan-rv-ua/quick-snippets/releases/download/v$version/quick-snippets-windows-x64-v$version.zip"
+        "url": "https://github.com/ruslan-rv-ua/quick-snippets/releases/download/v$version/quick-snippets-$version-windows-x64.zip"
       }
     },
     "hash": {
