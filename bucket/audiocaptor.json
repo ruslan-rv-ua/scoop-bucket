@@ -6,7 +6,7 @@
   "architecture": {
     "64bit": {
       "url": "https://github.com/ruslan-rv-ua/AudioCaptor/releases/download/v0.1.0/AudioCaptor.exe",
-      "hash": "PLACEHOLDER_SHA256_FILL_ON_RELEASE"
+      "hash": "378cfd53ea61532ab1800580ff2102fbe0341028002b7364546f79febe43f39a"
     }
   },
   "bin": "AudioCaptor.exe",
@@ -16,7 +16,9 @@
     "}"
   ],
   "persist": "AudioCaptor-data",
-  "checkver": { "github": "https://github.com/ruslan-rv-ua/AudioCaptor" },
+  "checkver": {
+    "github": "https://github.com/ruslan-rv-ua/AudioCaptor"
+  },
   "autoupdate": {
     "architecture": {
       "64bit": {
