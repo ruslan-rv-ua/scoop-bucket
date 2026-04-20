@@ -23,7 +23,10 @@
 ```
 scoop-bucket/
 ├─ bucket/
-│   ├─ browserselector.json   ← маніфест пакету
+│   ├─ audiocaptor.json        ← маніфест пакету (bare .exe)
+│   ├─ axygen-shot.json
+│   ├─ browserselector.json
+│   ├─ marka.json
 │   └─ quick-snippets.json
 └─ .github/
     └─ workflows/

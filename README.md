@@ -10,6 +10,24 @@ scoop bucket add ruslan-rv-ua https://github.com/ruslan-rv-ua/scoop-bucket
 
 ## Available Apps
 
+### [AudioCaptor](https://github.com/ruslan-rv-ua/AudioCaptor)
+
+A portable system audio recorder for Windows. Captures microphone and system audio simultaneously into a single WAV file.
+
+**Key features:**
+- Records microphone and system audio (loopback) in real-time
+- Real-time mixing with volume control per source
+- Global hotkey with short/long press detection (start, pause, stop)
+- Sound notifications for recording state changes
+- Full keyboard navigation and screen reader support
+- Portable single executable — all data stored next to the app
+
+```powershell
+scoop install audiocaptor
+```
+
+---
+
 ### [BrowserSelector](https://github.com/ruslan-rv-ua/BrowserSelector)
 
 A lightweight portable Windows app that intercepts link clicks and asks you which browser to open them with. Set it as your default browser and take full control over how URLs are handled.
@@ -63,6 +81,23 @@ a single window to PNG, copies to clipboard, with audio feedback.
 
 ```powershell
 scoop install axygen-shot
+```
+
+---
+
+### [Marka](https://github.com/ruslan-rv-ua/marka)
+
+A fast, accessible Markdown file viewer for Windows. Opens `.md` files with clean rendering, adjustable typography, and full screen reader support.
+
+**Key features:**
+- Opens Markdown files via command line, file dialog, or drag & drop
+- Adjustable font size and padding (Ctrl+±, Ctrl+[/])
+- Light/dark theme toggle (Ctrl+T), follows system preference
+- Full NVDA/Narrator accessibility — all elements labeled, code blocks navigable
+- Portable — single executable with settings.json next to it
+
+```powershell
+scoop install marka
 ```
 
 ---
