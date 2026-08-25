@@ -63,9 +63,14 @@ jobs:
       - name: Verify URL and hash
         run: |
           TEMP=$(mktemp)
-          echo "Downloading: $URL"
 
-          HTTP_CODE=$(curl -fsSL --write-out "%{http_code}" -o "$TEMP" "$URL")
+          # Маніфест може нести scoop-івський фрагмент '#/Name.exe', який перейменовує
+          # завантажений файл. Це частина URL для scoop, але не для сервера — качаємо без
+          # нього, а в маніфест нижче пишемо URL цілим, разом із фрагментом.
+          DL_URL="${URL%%#*}"
+          echo "Downloading: $DL_URL"
+
+          HTTP_CODE=$(curl -fsSL --write-out "%{http_code}" -o "$TEMP" "$DL_URL")
           if [ "$HTTP_CODE" != "200" ]; then
             echo "ERROR: Download failed (HTTP $HTTP_CODE)"
             exit 1
