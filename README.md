@@ -102,6 +102,24 @@ scoop install marka
 
 ---
 
+### [PathMaster](https://github.com/ruslan-rv-ua/pathmaster)
+
+A portable editor and diagnostics tool for the Windows `PATH` environment variable. Reads, edits and repairs both the user and machine `PATH`, and was built for a screen-reader user first rather than adapted for one afterwards.
+
+**Key features:**
+- Both `PATH`s in one place — yours and the machine's, each a plain list to read, reorder and correct; nothing reaches the registry until you apply it
+- Tells you what is broken: folders that do not exist, relative paths, entries wrapped in quotes, duplicates across both `PATH`s, empty entries, and a combined `PATH` longer than `cmd.exe` can use
+- Nothing is irreversible — full undo and redo, and a copy of a `PATH` is saved before that `PATH` is changed
+- Accessibility first, as universal design rather than a mode: every action has a keyboard route and a home in the menus, every message is shown as well as spoken, and the app sets no colours of its own, so High Contrast simply applies. Tested with NVDA
+- Interface in English and Ukrainian, set in Settings or followed from Windows
+- Portable — one executable, everything it writes lives in a `data` folder beside it and survives updates
+
+```powershell
+scoop install pathmaster
+```
+
+---
+
 ## Update all apps
 
 ```powershell
