@@ -1,20 +1,27 @@
-name: Update Scoop manifest
+name: Set a manifest by hand (override)
 
-# Живе в репозиторії scoop-bucket і обслуговує всі застосунки одразу.
+# Ручний важіль на випадок, коли Excavator не підходить: виставити конкретному
+# застосунку конкретну версію, URL і хеш.
+#
+# Звичайний шлях — це excavator.yml. Він сам читає checkver і autoupdate у
+# маніфесті й знаходить новий реліз. Цей воркфлоу потрібен тоді, коли треба
+# обійти цю логіку: відкотити маніфест на попередню версію, поставити реліз, який
+# checkver не бачить, або полагодити хеш, не чекаючи наступного релізу.
 #
 # Схема роботи:
-#   1. Отримує подію 'update-{appname}' від репозиторію застосунку
-#   2. Перевіряє що URL доступний і SHA256 збігається
+#   1. Приймає app / version / hash / url з форми запуску
+#   2. Перевіряє що URL доступний і SHA256 збігається — до того як щось міняти
 #   3. Оновлює маніфест bucket/{app}.json і пушить напряму в main
 #   4. CI перевіряє структуру маніфесту; при помилці — автоматично робить revert
 #
-# Щоб додати новий застосунок — достатньо покласти його маніфест у bucket/.
+# Маніфест мусить УЖЕ ІСНУВАТИ: цей воркфлоу оновлює, але не створює.
+#
+# Тригер repository_dispatch прибрано разом із переходом на Excavator. Ним
+# користувалися репозиторії застосунків, і для цього кожен тримав PAT із правом
+# запису сюди. Запуск звідси не потребує жодного секрету — вистачає токена, який
+# GitHub видає самому запуску.
 
 on:
-  repository_dispatch:
-    types:
-      - update-*
-
   workflow_dispatch:
     inputs:
       app:
@@ -40,10 +47,10 @@ jobs:
     # Нормалізуємо вхідні дані через env — безпечна альтернатива
     # прямій інтерполяції ${{ }} у run-блоках (захист від ін'єкцій)
     env:
-      APP:     ${{ github.event.client_payload.app     || github.event.inputs.app }}
-      VERSION: ${{ github.event.client_payload.version || github.event.inputs.version }}
-      HASH:    ${{ github.event.client_payload.hash    || github.event.inputs.hash }}
-      URL:     ${{ github.event.client_payload.url     || github.event.inputs.url }}
+      APP:     ${{ inputs.app }}
+      VERSION: ${{ inputs.version }}
+      HASH:    ${{ inputs.hash }}
+      URL:     ${{ inputs.url }}
 
     steps:
       - name: Checkout bucket
