@@ -7,16 +7,21 @@
   └─ push тегу v*
        └─ release.yml
             ├─ збірка
-            ├─ пакування у ZIP
-            ├─ публікація GitHub Release
-            └─ repository_dispatch → scoop-bucket
-                   └─ update-scoop-manifest.yml
-                        ├─ перевіряє що URL доступний і SHA256 збігається
-                        ├─ оновлює bucket/{app}.json
-                        └─ пушить напряму в main
-                               └─ ci.yml (перевірка маніфесту)
-                                    └─ при помилці — автоматичний revert
+            ├─ <App>-v<версія>-x64.exe + сайдкар .sha256
+            └─ GitHub Release
+                                        ┆  (нічого не перетинає межу між репозиторіями)
+scoop-bucket
+  └─ excavator.yml   (кнопка в Actions або розклад раз на добу)
+       ├─ читає checkver у кожному bucket/{app}.json
+       ├─ бачить новіший Release → будує URL за autoupdate, бере хеш із сайдкара
+       └─ комітить оновлений маніфест у main
+            └─ ci.yml (перевірка маніфесту)
+                 └─ при помилці — автоматичний revert
 ```
+
+Раніше застосунки самі писали в bucket через `repository_dispatch` і тримали для цього
+PAT у своїх секретах. Це прибрано: Excavator редагує репозиторій, у якому живе, тож йому
+вистачає власного `github.token`, і жоден токен не треба ротувати.
 
 ## Файли у цьому репозиторії
 
@@ -27,20 +32,50 @@ scoop-bucket/
 │   ├─ axygen-shot.json
 │   ├─ browserselector.json
 │   ├─ marka.json
+│   ├─ pathmaster.json         ← зразок маніфесту з autoupdate через сайдкар
 │   └─ quick-snippets.json
+├─ examples/
+│   └─ release-template.yml    ← шаблон release.yml для репозиторію застосунку
 └─ .github/
     └─ workflows/
         ├─ ci.yml                     ← перевірка маніфестів + revert при помилці
-        └─ update-scoop-manifest.yml  ← універсальний оновлювач
+        ├─ excavator.yml              ← автооновлення маніфестів (checkver/autoupdate)
+        └─ update-scoop-manifest.yml  ← ручний важіль: виставити версію/URL/хеш
 ```
 
 ---
 
 ## Як додати новий застосунок
 
-### 1. У репозиторії scoop-bucket
+### 1. У репозиторії застосунку
 
-Додай маніфест `bucket/{appname}.json` (назва файлу — lowercase):
+Скопіюй [`examples/release-template.yml`](examples/release-template.yml) у
+`.github/workflows/release.yml` і зроби три речі:
+
+1. **`APP_NAME`** — ім'я exe без розширення. З нього складається ім'я артефакту
+   `<APP_NAME>-v<версія>-x64.exe`.
+2. **Версія проєкту** — у кроці `Gate — the tag names the project version` заміни TODO на
+   читання версії зі свого джерела правди (Cargo.toml, package.json, файл VERSION). Тег,
+   що не збігається з версією, відмовляється до збірки.
+3. **Збірка і шлях до exe** — TODO-блок «ЗБІРКА» і рядок `Copy-Item` у `Stage the artifact`.
+
+Форма артефакту фіксована: **голий exe і сайдкар** `<hex64> *<ім'я файлу>`. Без ZIP —
+scoop перейменовує файл фрагментом `#/<APP_NAME>.exe`, а хеш бере з сайдкара.
+
+Секретів у репозиторії застосунку **не потрібно**: `gh release create` працює на
+`github.token` самого запуску.
+
+### 2. Тестовий реліз
+
+Постав тег із суфіксом — `v1.0.0-rc.1`. Release позначиться pre-release, а `releases/latest`
+не зрушить, тож bucket нічого не побачить. Перевір, що на сторінці Release лежать exe і
+`.sha256`, завантаж і запусти exe.
+
+### 3. Маніфест у bucket
+
+Excavator **оновлює** маніфести, але **не створює**: перший `bucket/{appname}.json`
+(ім'я файлу — lowercase) засівається руками, після справжнього (не rc) релізу.
+Зразок — [`bucket/pathmaster.json`](bucket/pathmaster.json):
 
 ```json
 {
@@ -50,140 +85,85 @@ scoop-bucket/
   "license": "MIT",
   "architecture": {
     "64bit": {
-      "url": "https://github.com/ruslan-rv-ua/MyApp/releases/download/v1.0.0/MyApp-1.0.0-windows-x64.zip",
-      "hash": "sha256тут",
-      "extract_dir": "MyApp"
+      "url": "https://github.com/ruslan-rv-ua/MyApp/releases/download/v1.0.0/MyApp-v1.0.0-x64.exe#/MyApp.exe",
+      "hash": "<64 hex із сайдкара>"
     }
   },
   "bin": "MyApp.exe",
-  "checkver": {
-    "github": "https://github.com/ruslan-rv-ua/MyApp"
+  "shortcuts": [["MyApp.exe", "MyApp"]],
+  "persist": "data",
+  "checkver": "github",
+  "autoupdate": {
+    "architecture": {
+      "64bit": {
+        "url": "https://github.com/ruslan-rv-ua/MyApp/releases/download/v$version/MyApp-v$version-x64.exe#/MyApp.exe",
+        "hash": { "url": "$url.sha256" }
+      }
+    }
   }
 }
 ```
 
-> ⚠️ Поле `extract_dir` має збігатись з назвою директорії яку скрипт пакування створює всередині ZIP. У шаблоні нижче це `$packageDir = $appName`, тобто `MyApp`. Якщо зміниш — оновлюй в обох місцях.
+Що тут несуче:
 
-Більше нічого у scoop-bucket робити не треба — `update-scoop-manifest.yml` вже готовий і підхопить будь-який новий маніфест автоматично.
+- **`#/MyApp.exe`** — фрагмент перейменовує завантажений файл; `bin` і `shortcuts` через це
+  не міняються від версії до версії.
+- **`checkver: "github"`** — Excavator дивиться на `releases/latest` репозиторію з `homepage`.
+- **`autoupdate.hash.url: "$url.sha256"`** — `$url` це URL без фрагмента, тож це сайдкар поруч
+  з exe; scoop сам читає з нього рядок `<hex64> *<ім'я>`.
+- **`persist`** — усе, що застосунок пише поряд із собою й що має пережити оновлення. Під
+  scoop ці теки лежать у версійному каталозі, який `scoop cleanup` видаляє; `persist` робить
+  із них junction у `~\scoop\persist\<app>\`. Кілька тек — масив: `["data", "recordings"]`.
 
-### 2. У репозиторії застосунку
+Перевір локально: `scoop install .\bucket\myapp.json` ставить застосунок прямо з файлу;
+`scoop uninstall myapp` після. Далі — розділ у README bucket, коміт і push у `main`; `ci.yml`
+валідує маніфест через `scoop info` і відкотить коміт, якщо структура бита.
 
-Скопіюй [`examples/release-template.yml`](examples/release-template.yml) у `.github/workflows/release.yml` репозиторію застосунку.
+### 4. Кожен наступний реліз
 
-Після копіювання зроби три речі:
-
-1. **`APP_NAME`** — зміни на ім'я свого застосунку (єдиний обов'язковий рядок, всі інші частини workflow генеруються з нього автоматично).
-2. **Кроки збірки** — заміни TODO-блок «ЗБІРКА» на кроки збірки свого проєкту. У шаблоні є готові коментовані приклади для MSYS2/make, Rust і Node.js.
-3. **Файли у ZIP** — у кроці `Create release package` заміни TODO-рядки `Copy-Item` на реальні шляхи до файлів свого застосунку.
-
-`APP_NAME` використовується скрізь у workflow: як ім'я ZIP-архіву і як ідентифікатор застосунку при відправці події в scoop-bucket (приводиться до lowercase автоматично).
-
-> **Що містить шаблон:**
-> - `workflow_dispatch` з двома полями: `version` (рядок, обов'язковий) і `prerelease` (прапорець, необов'язковий)
-> - При ручному запуску версія береться з `inputs.version`, при тег-тригері — з тегу автоматично
-> - `draft: false` — реліз публікується одразу, без чернетки
-> - Pre-release: автоматично за суфіксом тегу (`-alpha`/`-beta`/`-rc`) **і** за ручним прапорцем
-> - Умова `Update Scoop bucket` враховує обидва способи позначення pre-release
-
-### 3. Як створити SCOOP_BUCKET_TOKEN
-
-`SCOOP_BUCKET_TOKEN` — це персональний токен доступу (Personal Access Token), який дозволяє workflow у репозиторії застосунку писати в інший репозиторій — `scoop-bucket`. Стандартний `GITHUB_TOKEN` для цього не підходить, бо він має доступ тільки до поточного репозиторію.
-
-**Крок 1: відкрий сторінку створення токена**
-
-GitHub → аватар у правому верхньому куті → **Settings** → ліве меню, прокрути вниз → **Developer settings** → **Personal access tokens** → **Fine-grained tokens** → **Generate new token**
-
-**Крок 2: заповни форму**
-
-| Поле | Значення |
-|------|----------|
-| Token name | `scoop-bucket-dispatch` (або будь-яка зрозуміла назва) |
-| Expiration | на свій розсуд; рекомендую 1 рік — GitHub нагадає про оновлення |
-| Resource owner | `ruslan-rv-ua` |
-| Repository access | **Only select repositories** → вибрати `scoop-bucket` |
-
-У секції **Permissions → Repository permissions** встанови:
-- **Contents**: Read and write
-- **Metadata**: Read-only (додається автоматично)
-
-Решта прав — залишай без змін (No access).
-
-**Крок 3: збережи токен**
-
-Натисни **Generate token**. GitHub покаже значення токена — рядок виду `github_pat_...`.
-
-> ⚠️ Це єдиний момент коли GitHub показує повне значення токена. Після закриття сторінки побачити його знову буде неможливо. Скопіюй його зараз.
-
-**Один токен — для всіх застосунків.** Токен надає доступ до `scoop-bucket`, а не до конкретного застосунку — тому він один для всіх. При додаванні нового застосунку просто додаєш той самий токен як секрет у новий репозиторій.
-
-> ⚠️ Збережи токен у менеджері паролів одразу після генерації. Якщо загубиш — доведеться генерувати новий і вручну оновлювати секрет `SCOOP_BUCKET_TOKEN` у кожному репозиторії застосунку.
-
-### 4. Налаштування секрету у репозиторії застосунку
-
-Скопійований токен треба зберегти як секрет у репозиторії застосунку, щоб workflow міг його використати.
-
-GitHub → репозиторій застосунку → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**
-
-| Поле | Значення |
-|------|----------|
-| Name | `SCOOP_BUCKET_TOKEN` |
-| Secret | вставити скопійоване значення токена (`github_pat_...`) |
-
-Натисни **Add secret**.
-
-Після цього `${{ secrets.SCOOP_BUCKET_TOKEN }}` у `release.yml` автоматично підставить потрібне значення під час запуску workflow. Саме значення токена ніколи не з'являється у логах.
-
----
-
-## Як виглядає процес після push тегу
-
-```
-git tag v1.2.3
-git push origin v1.2.3
-```
-
-1. `release.yml` запускається на `windows-latest`
-2. Збирає застосунок
-3. Пакує `MyApp-1.2.3-windows-x64.zip` + рахує SHA256
-4. Публікує GitHub Release з автогенерованими release notes
-5. Надсилає `repository_dispatch` з `event-type: update-myapp` у scoop-bucket
-6. `update-scoop-manifest.yml` завантажує ZIP і перевіряє SHA256 — якщо не збігається, зупиняється з помилкою
-7. Оновлює `bucket/myapp.json` (version, url, hash) і пушить напряму в main
-8. `ci.yml` перевіряє JSON-синтаксис і структуру маніфесту через `scoop info`
-9. Якщо ✓ — готово, маніфест у main актуальний
-10. Якщо ✗ — CI автоматично робить revert коміту і сповіщає про помилку
-
-Для тегів з `-alpha`, `-beta`, `-rc` — GitHub Release позначається як pre-release, крок оновлення bucket пропускається.
+Тег → Release → **Actions → Excavator → Run workflow** у цьому репозиторії (або дочекатись
+добового запуску о 04:20 UTC). Лог Excavator називає кожен застосунок і що з ним сталось;
+`THROW_ERROR: 1` робить помилку checkver червоним прогоном, а не тихим зеленим.
 
 ---
 
 ## Ручне оновлення маніфесту
 
-Якщо треба оновити маніфест без релізу (наприклад виправити щось):
+Коли Excavator не підходить — відкотити на попередню версію, поставити реліз, якого
+`checkver` не бачить, полагодити хеш:
 
-- GitHub → scoop-bucket → **Actions → Update Scoop manifest → Run workflow**
-- Заповнити поля: `app`, `version`, `hash`, `url`
+- GitHub → scoop-bucket → **Actions → Set a manifest by hand (override) → Run workflow**
+- Заповнити поля: `app`, `version`, `hash`, `url` (URL можна з фрагментом `#/…`)
+
+Workflow завантажує файл і звіряє хеш **до** того, як щось змінювати.
 
 ---
 
 ## Checklist для нового застосунку
 
-- [ ] Створено `bucket/{appname}.json` у scoop-bucket
-- [ ] Скопійовано [`examples/release-template.yml`](examples/release-template.yml) як `.github/workflows/release.yml` у репозиторій застосунку, змінено `APP_NAME`, замінено TODO-кроки збірки і файли ZIP
-- [ ] Додано секрет `SCOOP_BUCKET_TOKEN` у репозиторій застосунку
-- [ ] Зроблено тестовий реліз з тегом типу `v0.1.0-alpha` (bucket не чіпає, але перевіряє збірку і пакування)
-- [ ] Зроблено повноцінний реліз, перевірено що `bucket/myapp.json` у main оновився автоматично
+- [ ] Скопійовано `examples/release-template.yml` у репозиторій застосунку; змінено
+      `APP_NAME`, читання версії, кроки збірки й шлях до exe
+- [ ] Тестовий реліз `v1.0.0-rc.1`: на сторінці Release є exe і `.sha256`
+- [ ] Справжній реліз `v1.0.0`
+- [ ] `bucket/{appname}.json` засіяно руками з хешем із сайдкара; `scoop install .\bucket\{appname}.json` працює
+- [ ] Розділ у README bucket
+- [ ] Наступний реліз: Excavator оновив маніфест сам, CI bucket зелений
 
 ---
 
 ## Можливі проблеми
 
-**CI падає з "Invalid manifest" і робить revert** — перевір структуру JSON, особливо поле `architecture."64bit"`. Запусти `scoop info` локально. Після виправлення запусти оновлення вручну через **Actions → Update Scoop manifest → Run workflow**.
+**CI падає з "Invalid manifest" і робить revert** — перевір структуру JSON, особливо поле
+`architecture."64bit"`. Запусти `scoop info` локально. Після виправлення — коміт у `main`
+або ручний workflow.
 
-**`update-scoop-manifest.yml` падає з "Hash mismatch"** — SHA256 що передається у `repository_dispatch` не збігається з реальним вмістом файлу за вказаним URL. Перевір як рахується хеш у `release.yml` застосунку.
+**Excavator зелений, але маніфест не оновився** — прочитай лог: він перелічує кожен застосунок.
+Найчастіші причини: реліз позначений pre-release (`releases/latest` не зрушив), сайдкара
+немає або він не у форматі `<hex64> *<ім'я>`, `homepage` у маніфесті не вказує на репозиторій
+із релізами.
 
-**`update-scoop-manifest.yml` падає з "Download failed"** — URL недоступний. Можливо GitHub Release ще не опублікований на момент запуску dispatch. Спробуй запустити оновлення вручну через **Actions → Update Scoop manifest → Run workflow** через кілька хвилин.
+**Excavator червоний з "Hash mismatch" / "Could not find hash"** — сайдкар лежить не поруч
+з exe або має інше ім'я, ніж `<url без фрагмента>.sha256`. Перевір `autoupdate.hash.url`.
 
-**`repository_dispatch` не спрацьовує** — перевір що токен `SCOOP_BUCKET_TOKEN` не прострочений і має доступ до scoop-bucket з правами Contents: write.
-
-**Помилка "Manifest file not found"** — назва файлу у `bucket/` має бути строго lowercase і збігатись з `APP_NAME` приведеним до lowercase у `release.yml`.
+**Помилка "Manifest file not found" у ручному workflow** — ім'я файлу в `bucket/` має бути
+строго lowercase і збігатись із полем `app`.

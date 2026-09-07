@@ -1,30 +1,34 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# release-template.yml — шаблон для GitHub Actions release workflow
+# release-template.yml — шаблон релізного workflow для репозиторію застосунку
 # ─────────────────────────────────────────────────────────────────────────────
 #
 # ВИКОРИСТАННЯ
 #   1. Скопіюй цей файл у .github/workflows/release.yml репозиторію застосунку.
-#   2. Зміни APP_NAME на ім'я свого застосунку (єдине обов'язкове місце).
-#   3. Заміни TODO-блоки: збірка і список файлів для ZIP.
-#   Решта — вже готова до роботи.
+#   2. Зміни APP_NAME (ім'я exe без розширення) — єдине обов'язкове місце.
+#   3. Заміни TODO-блоки: збірка і шлях до зібраного exe.
+#   Решта готова до роботи.
 #
 # ЩО ВІДБУВАЄТЬСЯ ПРИ ЗАПУСКУ
-#   push тегу v*  →  збірка  →  ZIP + SHA256  →  GitHub Release  →
-#   →  repository_dispatch  →  scoop-bucket автоматично оновлює маніфест
+#   push тегу v*  →  версія тегу = версія проєкту  →  збірка  →
+#   →  <APP_NAME>-v<версія>-x64.exe + сайдкар .sha256  →  GitHub Release
 #
-# ТРИГЕРИ
-#   • push тегу  v*        — основний шлях: git tag v1.2.3 && git push --tags
-#   • workflow_dispatch    — ручний перезапуск (наприклад, якщо автоматичний
-#                            завершився з помилкою, а код вже виправлено)
+# А далі — НІЧОГО. Bucket оновлюється сам: його Excavator читає `checkver` і
+# `autoupdate` в bucket/<app>.json, знаходить новий Release, бере хеш із сайдкара
+# й комітить. Жодного repository_dispatch, жодного PAT у секретах застосунку.
+# Запуск Excavator — кнопкою в bucket (Actions → Excavator → Run workflow) або
+# добовим розкладом. Докладно: DEVELOPMENT.md → «Як додати новий застосунок».
+#
+# ФОРМА АРТЕФАКТУ
+#   Голий exe, без ZIP: bucket перейменовує його фрагментом `#/<APP_NAME>.exe`,
+#   тож `bin` і `shortcuts` у маніфесті стабільні між версіями. Сайдкар —
+#   рядок `<hex64> *<ім'я файлу>` (формат sha256sum): це один із двох форматів,
+#   які scoop читає з `autoupdate.hash.url` без додаткових налаштувань.
 #
 # PRE-RELEASE
-#   Теги з суфіксами -alpha, -beta, -rc автоматично позначаються як pre-release.
-#   Крім того, при ручному запуску можна явно поставити прапорець prerelease.
-#   Для pre-release кроки "Update Scoop bucket" пропускається.
-#
-# НЕОБХІДНІ СЕКРЕТИ
-#   SCOOP_BUCKET_TOKEN  — Fine-grained PAT з правом Contents: write на scoop-bucket
-#                         Докладно: DEVELOPMENT.md → "Як додати новий застосунок"
+#   Тег із суфіксом після дефіса (v1.2.3-rc.1, -beta) позначається pre-release.
+#   `checkver: github` дивиться лише на releases/latest, тож такий реліз bucket
+#   не побачить — це спосіб прогнати ланцюг без наслідків для користувачів.
+#   Версія звіряється без суфікса: тег v1.2.3-rc.1 вимагає версії проєкту 1.2.3.
 # ─────────────────────────────────────────────────────────────────────────────
 
 name: Release
@@ -33,154 +37,104 @@ on:
   push:
     tags:
       - 'v*'
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Версія (без "v", наприклад: 1.2.3)'
-        required: true
-        type: string
-      prerelease:
-        description: 'Позначити як pre-release?'
-        required: false
-        type: boolean
-        default: false
+
+permissions:
+  contents: write # gh release create
 
 env:
-  # ─── ЄДИНЕ МІСЦЕ ДЕ ТРЕБА ЗМІНИТИ ІМ'Я ───────────────────────────────────
-  # Регістр важливий: це ім'я буде використано в назві ZIP-архіву.
-  # APP_ID (для event-type у scoop-bucket) буде автоматично приведено до lowercase.
+  # ─── ЄДИНЕ МІСЦЕ, ДЕ ТРЕБА ЗМІНИТИ ІМ'Я ──────────────────────────────────
+  # Регістр важливий: це ім'я exe і половина імені артефакту.
   APP_NAME: MyApp
   # ──────────────────────────────────────────────────────────────────────────
 
-permissions:
-  contents: write
+defaults:
+  run:
+    shell: pwsh
 
 jobs:
-  build:
+  release:
     runs-on: windows-latest
+    timeout-minutes: 45
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+
+      # Тег — єдине твердження про версію, яке додає реліз. Звіряємо його з
+      # версією в проєкті ДО збірки, щоб помилка коштувала секунди, не хвилини.
+      - name: Gate — the tag names the project version
+        run: |
+          $tag = '${{ github.ref_name }}'
+          $version = ($tag.TrimStart('v') -split '-', 2)[0]
+
+          # ── TODO: прочитай версію проєкту зі свого джерела правди ─────────
+          # Rust:   $project = (Select-String -Path Cargo.toml -Pattern '^version\s*=\s*"([^"]+)"' |
+          #                     Select-Object -First 1).Matches[0].Groups[1].Value
+          # Node:   $project = (Get-Content package.json | ConvertFrom-Json).version
+          # Go:     $project = (Get-Content VERSION -Raw).Trim()
+          $project = $version
+          # ────────────────────────────────────────────────────────────────────
+
+          if ($project -ne $version) { throw "project version '$project' does not match tag '$tag'" }
+          "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "ASSET=$env:APP_NAME-$tag-x64.exe" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "PRERELEASE=$($tag.Contains('-'))" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
       # ── ЗБІРКА ───────────────────────────────────────────────────────────────
       # TODO: додай сюди кроки збірки свого застосунку.
       #
-      # Приклад для C/C++ з MSYS2 + make:
+      # Приклад для Rust:
       #
-      #   - name: Setup MSYS2
-      #     uses: msys2/setup-msys2@v2
+      #   - name: Build
+      #     run: cargo build --release --locked
+      #
+      # Приклад для Go:
+      #
+      #   - name: Set up Go
+      #     uses: actions/setup-go@v5
       #     with:
-      #       msystem: MINGW64
-      #       update: true
-      #       install: >-
-      #         mingw-w64-x86_64-gcc
-      #         make
+      #       go-version-file: go.mod
+      #   - name: Build
+      #     run: go build -ldflags "-s -w -H windowsgui" -o "$env:APP_NAME.exe" .
       #
-      #   - name: Build Release
-      #     shell: msys2 {0}
-      #     run: |
-      #       make release
+      # Приклад для Tauri (Node + Rust):
       #
-      # Приклад для Rust (з кешуванням):
-      #
-      #   - name: Install Rust stable toolchain
-      #     uses: dtolnay/rust-toolchain@stable
-      #     with:
-      #       targets: x86_64-pc-windows-msvc
-      #
-      #   - name: Cache Rust build artifacts
-      #     uses: Swatinem/rust-cache@v2
-      #
-      #   - name: Build Release
-      #     run: cargo build --release
-      #
-      # Приклад для Node.js / Electron:
-      #
-      #   - name: Set up Node.js
-      #     uses: actions/setup-node@v4
+      #   - uses: pnpm/action-setup@v4
+      #   - uses: actions/setup-node@v5
       #     with:
       #       node-version: 'lts/*'
-      #       cache: 'npm'
-      #
-      #   - name: Install dependencies and build
-      #     run: |
-      #       npm ci
-      #       npm run build
-      #
+      #   - run: pnpm install --frozen-lockfile
+      #   - run: pnpm tauri build --no-bundle
       # ─────────────────────────────────────────────────────────────────────────
 
-      # При push-тегу: VERSION береться з тегу (refs/tags/v1.2.3 → 1.2.3)
-      # При ручному запуску: VERSION береться з inputs.version
-      - name: Get version and app info
-        id: info
-        shell: bash
+      - name: Stage the artifact
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            VERSION="${{ inputs.version }}"
-          else
-            VERSION=${GITHUB_REF#refs/tags/v}
-          fi
-          APP_ID=$(echo "${{ env.APP_NAME }}" | tr '[:upper:]' '[:lower:]')
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-          echo "APP_ID=$APP_ID" >> $GITHUB_OUTPUT
-          echo "Building ${{ env.APP_NAME }} version $VERSION (app id: $APP_ID)"
-
-      - name: Create release package
-        id: package
-        shell: pwsh
-        run: |
-          $appName = "${{ env.APP_NAME }}"
-          $version = "${{ steps.info.outputs.VERSION }}"
-          $packageDir = $appName
-          $zipName = "$appName-$version-windows-x64.zip"
-
-          New-Item -ItemType Directory -Force -Path $packageDir
-
-          # ── TODO: скопіюй сюди файли які мають потрапити в ZIP ─────────────
-          # Шляхи залежать від твого проєкту.
-          # Copy-Item "bin\$appName.exe" -Destination $packageDir
-          # Copy-Item "LICENSE"          -Destination $packageDir
-          # Copy-Item "README.md"        -Destination $packageDir
-          # Copy-Item "config.json"      -Destination $packageDir
+          New-Item -ItemType Directory -Force artifacts | Out-Null
+          # ── TODO: шлях до зібраного exe ─────────────────────────────────────
+          # Rust:  target\release\$env:APP_NAME.exe
+          # Go:    $env:APP_NAME.exe
+          Copy-Item "target\release\$env:APP_NAME.exe" "artifacts\$env:ASSET"
           # ────────────────────────────────────────────────────────────────────
+          Get-Item "artifacts\$env:ASSET" | Format-List Name, Length
 
-          Compress-Archive -Path $packageDir -DestinationPath $zipName -Force
+      # Сайдкар пишеться після всіх перевірок: провалений прогін не лишає хешу
+      # для файлу, який нікому не слід ставити.
+      - name: Write the SHA-256 sidecar
+        run: |
+          $hash = (Get-FileHash "artifacts\$env:ASSET" -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash *$env:ASSET" | Out-File -FilePath "artifacts\$env:ASSET.sha256" -Encoding ascii -NoNewline
+          Get-Content "artifacts\$env:ASSET.sha256"
 
-          $hash = (Get-FileHash -Path $zipName -Algorithm SHA256).Hash.ToLower()
-          $hash | Out-File -FilePath "$zipName.sha256" -NoNewline -Encoding ascii
-
-          Write-Host "Package: $zipName"
-          Write-Host "SHA256:  $hash"
-
-          echo "HASH=$hash" >> $env:GITHUB_OUTPUT
-          echo "ZIP_NAME=$zipName" >> $env:GITHUB_OUTPUT
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            ${{ env.APP_NAME }}-*.zip
-            ${{ env.APP_NAME }}-*.zip.sha256
-          generate_release_notes: true
-          draft: false
-          # Pre-release якщо: тег містить -alpha/-beta/-rc АБО вручну позначено
-          prerelease: ${{ inputs.prerelease || contains(github.ref, '-alpha') || contains(github.ref, '-beta') || contains(github.ref, '-rc') }}
+      - name: Create the GitHub release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # Оновлення scoop-bucket пропускається для pre-release (будь-якого виду)
-      - name: Update Scoop bucket
-        if: ${{ !inputs.prerelease && !contains(github.ref, '-alpha') && !contains(github.ref, '-beta') && !contains(github.ref, '-rc') }}
-        uses: peter-evans/repository-dispatch@v3
-        with:
-          token: ${{ secrets.SCOOP_BUCKET_TOKEN }}
-          repository: ruslan-rv-ua/scoop-bucket
-          event-type: update-${{ steps.info.outputs.APP_ID }}
-          client-payload: |
-            {
-              "app": "${{ steps.info.outputs.APP_ID }}",
-              "version": "${{ steps.info.outputs.VERSION }}",
-              "hash": "${{ steps.package.outputs.HASH }}",
-              "url": "https://github.com/${{ github.repository }}/releases/download/v${{ steps.info.outputs.VERSION }}/${{ steps.package.outputs.ZIP_NAME }}"
-            }
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $args = @(
+            'release', 'create', '${{ github.ref_name }}',
+            "artifacts\$env:ASSET", "artifacts\$env:ASSET.sha256",
+            '--verify-tag',
+            '--title', "$env:APP_NAME ${{ github.ref_name }}",
+            '--generate-notes'
+          )
+          if ($env:PRERELEASE -eq 'True') { $args += '--prerelease' }
+          gh @args
