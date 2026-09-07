@@ -1,0 +1,50 @@
+{
+    "##": [
+        "The live manifest. Seeded by hand from packaging/scoop/tapir.json in the tapir",
+        "repository (docs/release.md, «Засівання bucket»); bumped after that by this bucket's",
+        "own Excavator, which reads the checkver and autoupdate fields below.",
+        "",
+        "The '#/tapir.exe' fragment renames the download, so 'bin' and 'shortcuts' stay stable",
+        "across versions while the release asset keeps its version in its name.",
+        "",
+        "'persist' carries both folders Tapir keeps beside the exe: 'data' (settings, profiles)",
+        "and 'recordings' (what the app exists for). Under scoop they would otherwise live in",
+        "the versioned app directory that 'scoop cleanup' and 'scoop uninstall' delete.",
+        "",
+        "autoupdate's hash comes from the release's .sha256 sidecar: '$url' is the download URL",
+        "with the '#/' fragment stripped, and the sidecar's '<hex64> *<filename>' line is what",
+        "scoop's default hash extraction reads."
+    ],
+    "version": "0.1.0",
+    "description": "Accessible Internet Radio Recorder for Windows",
+    "homepage": "https://github.com/ruslan-rv-ua/tapir",
+    "license": "MIT",
+    "architecture": {
+        "64bit": {
+            "url": "https://github.com/ruslan-rv-ua/tapir/releases/download/v0.1.0/tapir-v0.1.0-x64.exe#/tapir.exe",
+            "hash": "2104c616e2a19ef27473f26263e91c3732a8bcadc59590a035128df57fedf572"
+        }
+    },
+    "bin": "tapir.exe",
+    "shortcuts": [
+        [
+            "tapir.exe",
+            "Tapir"
+        ]
+    ],
+    "persist": [
+        "data",
+        "recordings"
+    ],
+    "checkver": "github",
+    "autoupdate": {
+        "architecture": {
+            "64bit": {
+                "url": "https://github.com/ruslan-rv-ua/tapir/releases/download/v$version/tapir-v$version-x64.exe#/tapir.exe",
+                "hash": {
+                    "url": "$url.sha256"
+                }
+            }
+        }
+    }
+}

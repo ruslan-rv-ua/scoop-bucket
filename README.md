@@ -120,6 +120,24 @@ scoop install pathmaster
 
 ---
 
+### [Tapir](https://github.com/ruslan-rv-ua/tapir)
+
+An accessible internet radio player and recorder for Windows. Listens to a station, records it, and splits the recording into tracks with artist and title tags taken from the station's own now-playing data.
+
+**Key features:**
+- Records ICY / Icecast / SHOUTcast streams in MP3 and AAC; automatic track splitting with tags, plus an optional continuous file of the whole broadcast
+- Wishlist announces the tracks you are waiting for; ignorelist keeps ads and unwanted songs out of your files
+- Station browser over the Radio Browser directory, scheduler for one-off and weekly recordings, profiles for different sets of stations
+- Global hotkeys and a tray menu, so it works while you do something else
+- Built for NVDA, JAWS and Narrator; interface and help in English and Ukrainian
+- Portable — one executable; `data` and `recordings` live beside it and survive updates
+
+```powershell
+scoop install tapir
+```
+
+---
+
 ## Update all apps
 
 ```powershell
