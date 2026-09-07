@@ -129,12 +129,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $args = @(
+          $ghArgs = @(
             'release', 'create', '${{ github.ref_name }}',
             "artifacts\$env:ASSET", "artifacts\$env:ASSET.sha256",
             '--verify-tag',
             '--title', "$env:APP_NAME ${{ github.ref_name }}",
             '--generate-notes'
           )
-          if ($env:PRERELEASE -eq 'True') { $args += '--prerelease' }
-          gh @args
+          if ($env:PRERELEASE -eq 'True') { $ghArgs += '--prerelease' }
+          gh @ghArgs
