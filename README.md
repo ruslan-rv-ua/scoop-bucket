@@ -138,6 +138,25 @@ scoop install tapir
 
 ---
 
+### [revisor](https://github.com/ruslan-rv-ua/revisor)
+
+Snapshots of chosen folders, and what changed between two of them. Take a snapshot before you install, update or run a program and another one after it, and revisor lists the files that program created, changed or deleted. Built for the keyboard and screen readers first.
+
+**Key features:**
+- Profiles name the folders to watch and the exclusions to leave out; a new profile starts with 63 default exclusions for caches, logs and temporary files
+- A snapshot records every file, folder and link with its dates, attributes, size, NTFS file ID and the version of `.exe` and `.dll` files, without reading file contents
+- Compare the current snapshot with the previous one or any other, or take a new snapshot and compare it in one command (`Ctrl+F5`)
+- The difference as a list with a summary above it — filters by type and text, sorting by any column, details before and after, and Show in File Explorer
+- Accessibility first: native Windows controls, every command in the menus with an access key, shortcuts that work in any keyboard layout, and status messages a screen reader reads without moving the focus. Tested with NVDA
+- Interface in English and Ukrainian, followed from Windows or set in Settings
+- Portable — one executable; everything it saves lives in a `data` folder beside it and survives updates
+
+```powershell
+scoop install revisor
+```
+
+---
+
 ## Update all apps
 
 ```powershell

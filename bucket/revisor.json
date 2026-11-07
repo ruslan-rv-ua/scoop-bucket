@@ -1,0 +1,54 @@
+{
+    "##": [
+        "The live manifest. Seeded by hand from packaging/scoop/revisor.json in the revisor",
+        "repository (the Backlog document «Випуск релізу», section «Засів bucket»); bumped after that",
+        "by this bucket's own Excavator, which reads the checkver and autoupdate fields below. The",
+        "Excavator is started by hand from the Actions tab after each release, with a daily run as",
+        "a backstop.",
+        "",
+        "The '#/revisor.exe' fragment renames the download, so 'bin' and the shortcut stay the same",
+        "across versions while the release file keeps its version in its name. scoop strips the",
+        "fragment before it downloads.",
+        "",
+        "A GUI exe needs nothing special: scoop makes the shim a GUI program when its target is",
+        "one, so starting revisor from PATH flashes no console. 'shortcuts' adds 'revisor' to the",
+        "Start menu.",
+        "",
+        "revisor keeps everything it writes in a 'data' folder beside its exe. 'persist' links",
+        "<app>\\data to ~\\scoop\\persist\\revisor\\data with a junction, so settings, profiles and",
+        "snapshots survive 'scoop update' and 'scoop uninstall' without --purge.",
+        "",
+        "autoupdate takes the hash from the release's .sha256 sidecar: '$url' there is the download",
+        "URL without its '#/' fragment, so '$url.sha256' is the sidecar beside the exe, and its",
+        "'<hex64> *<name>' line is what scoop's hash extraction reads."
+    ],
+    "version": "0.1.0",
+    "description": "Folder snapshots that show what a program created, changed or deleted, made for the keyboard and screen readers",
+    "homepage": "https://github.com/ruslan-rv-ua/revisor",
+    "license": "MIT",
+    "architecture": {
+        "64bit": {
+            "url": "https://github.com/ruslan-rv-ua/revisor/releases/download/v0.1.0/revisor-v0.1.0-x64.exe#/revisor.exe",
+            "hash": "a91a1b98344bd1460163c1cf0b339fc9378c76aca539aa5a9e58674cc1344825"
+        }
+    },
+    "bin": "revisor.exe",
+    "shortcuts": [
+        [
+            "revisor.exe",
+            "revisor"
+        ]
+    ],
+    "persist": "data",
+    "checkver": "github",
+    "autoupdate": {
+        "architecture": {
+            "64bit": {
+                "url": "https://github.com/ruslan-rv-ua/revisor/releases/download/v$version/revisor-v$version-x64.exe#/revisor.exe",
+                "hash": {
+                    "url": "$url.sha256"
+                }
+            }
+        }
+    }
+}
