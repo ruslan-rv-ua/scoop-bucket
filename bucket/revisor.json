@@ -22,14 +22,14 @@
         "URL without its '#/' fragment, so '$url.sha256' is the sidecar beside the exe, and its",
         "'<hex64> *<name>' line is what scoop's hash extraction reads."
     ],
-    "version": "0.1.0",
+    "version": "0.2.0",
     "description": "Folder snapshots that show what a program created, changed or deleted, made for the keyboard and screen readers",
     "homepage": "https://github.com/ruslan-rv-ua/revisor",
     "license": "MIT",
     "architecture": {
         "64bit": {
-            "url": "https://github.com/ruslan-rv-ua/revisor/releases/download/v0.1.0/revisor-v0.1.0-x64.exe#/revisor.exe",
-            "hash": "a91a1b98344bd1460163c1cf0b339fc9378c76aca539aa5a9e58674cc1344825"
+            "url": "https://github.com/ruslan-rv-ua/revisor/releases/download/v0.2.0/revisor-v0.2.0-x64.exe#/revisor.exe",
+            "hash": "1078831885621c2f304b12f3a115333cab62b7736bc48c6cdeac3679d740c338"
         }
     },
     "bin": "revisor.exe",
