@@ -5,8 +5,8 @@
   "license": "MIT",
   "notes": [
     "QuickSnippets is a portable app — your data files (snippets.db, settings.json)",
-    "are stored next to the executable and preserved across Scoop updates.",
-    "Use Ctrl+Shift+Space (default) to toggle the snippet window."
+    "are stored in the persisted quick-snippets-data folder and kept across Scoop updates.",
+    "Press Ctrl+Alt+Space to show or hide the snippet window."
   ],
   "architecture": {
     "64bit": {
