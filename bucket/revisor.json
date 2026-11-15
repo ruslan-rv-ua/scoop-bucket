@@ -4,35 +4,49 @@
         "repository (the Backlog document «Випуск релізу», section «Засів bucket»); bumped after that",
         "by this bucket's own Excavator, which reads the checkver and autoupdate fields below. The",
         "Excavator is started by hand from the Actions tab after each release, with a daily run as",
-        "a backstop.",
+        "a backstop. Excavator changes versions and hashes only, never the shape: 0.5.0 added",
+        "revisor-cli.exe, so this copy was brought to the new shape by hand for that release.",
         "",
-        "The '#/revisor.exe' fragment renames the download, so 'bin' and the shortcut stay the same",
-        "across versions while the release file keeps its version in its name. scoop strips the",
-        "fragment before it downloads.",
+        "Two files per release: revisor.exe, the window, and revisor-cli.exe, the command line. The",
+        "'#/revisor.exe' and '#/revisor-cli.exe' fragments rename the downloads, so 'bin' and the",
+        "shortcut stay the same across versions while the release files keep their versions in",
+        "their names. scoop strips the fragment before it downloads.",
         "",
         "A GUI exe needs nothing special: scoop makes the shim a GUI program when its target is",
-        "one, so starting revisor from PATH flashes no console. 'shortcuts' adds 'revisor' to the",
-        "Start menu.",
+        "one, so starting revisor from PATH flashes no console. The shim of revisor-cli.exe is a",
+        "console program like its target, so a script waits for it and gets its exit code.",
+        "'shortcuts' adds 'revisor' to the Start menu; the command line gets no shortcut.",
         "",
-        "revisor keeps everything it writes in a 'data' folder beside its exe. 'persist' links",
-        "<app>\\data to ~\\scoop\\persist\\revisor\\data with a junction, so settings, profiles and",
-        "snapshots survive 'scoop update' and 'scoop uninstall' without --purge.",
+        "revisor keeps everything it writes in a 'data' folder beside its exes, which both exes",
+        "share. 'persist' links <app>\\data to ~\\scoop\\persist\\revisor\\data with a junction, so",
+        "settings, profiles and snapshots survive 'scoop update' and 'scoop uninstall' without",
+        "--purge.",
         "",
-        "autoupdate takes the hash from the release's .sha256 sidecar: '$url' there is the download",
-        "URL without its '#/' fragment, so '$url.sha256' is the sidecar beside the exe, and its",
-        "'<hex64> *<name>' line is what scoop's hash extraction reads."
+        "autoupdate takes each hash from its file's .sha256 sidecar: '$url' there is the download",
+        "URL of the file in turn, without its '#/' fragment, so '$url.sha256' is the sidecar",
+        "beside it, and its '<hex64> *<name>' line is what scoop's hash extraction reads. One hash",
+        "template serves both URLs: scoop reuses the last template for every URL after it."
     ],
-    "version": "0.4.0",
+    "version": "0.5.0",
     "description": "Folder snapshots that show what a program created, changed or deleted, made for the keyboard and screen readers",
     "homepage": "https://github.com/ruslan-rv-ua/revisor",
     "license": "MIT",
     "architecture": {
         "64bit": {
-            "url": "https://github.com/ruslan-rv-ua/revisor/releases/download/v0.4.0/revisor-v0.4.0-x64.exe#/revisor.exe",
-            "hash": "2b9d0f46937e66e09c866ec960433257696360b83f13001461a9086b26d28a20"
+            "url": [
+                "https://github.com/ruslan-rv-ua/revisor/releases/download/v0.5.0/revisor-v0.5.0-x64.exe#/revisor.exe",
+                "https://github.com/ruslan-rv-ua/revisor/releases/download/v0.5.0/revisor-cli-v0.5.0-x64.exe#/revisor-cli.exe"
+            ],
+            "hash": [
+                "652a82bbf6c4565addf7917235c6b9c5e2d0676889f8c1846b7ecbd6a57b7ff3",
+                "368547633fd6eef9292b66bc5f7243bb3ce8b5b448033b5374d3a3cc8aad6837"
+            ]
         }
     },
-    "bin": "revisor.exe",
+    "bin": [
+        "revisor.exe",
+        "revisor-cli.exe"
+    ],
     "shortcuts": [
         [
             "revisor.exe",
@@ -44,7 +58,10 @@
     "autoupdate": {
         "architecture": {
             "64bit": {
-                "url": "https://github.com/ruslan-rv-ua/revisor/releases/download/v$version/revisor-v$version-x64.exe#/revisor.exe",
+                "url": [
+                    "https://github.com/ruslan-rv-ua/revisor/releases/download/v$version/revisor-v$version-x64.exe#/revisor.exe",
+                    "https://github.com/ruslan-rv-ua/revisor/releases/download/v$version/revisor-cli-v$version-x64.exe#/revisor-cli.exe"
+                ],
                 "hash": {
                     "url": "$url.sha256"
                 }
