@@ -1,5 +1,5 @@
 {
-    "version": "0.2.1",
+    "version": "0.3.0",
     "description": "Portable Windows desktop app for quick access to text snippets",
     "homepage": "https://github.com/ruslan-rv-ua/quick-snippets",
     "license": "MIT",
@@ -10,8 +10,8 @@
     ],
     "architecture": {
         "64bit": {
-            "url": "https://github.com/ruslan-rv-ua/quick-snippets/releases/download/v0.2.1/quick-snippets-0.2.1-windows-x64.zip",
-            "hash": "f279be6e89385d959cd5231a4ca6fd5a8927ef516ed30065d99d8464aac24585"
+            "url": "https://github.com/ruslan-rv-ua/quick-snippets/releases/download/v0.3.0/quick-snippets-0.3.0-windows-x64.zip",
+            "hash": "3af45979731b6235fa906bad4562c52280c91e2902b2d1538db1ce50e3ed8c11"
         }
     },
     "bin": "quick-snippets.exe",
