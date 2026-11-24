@@ -1,32 +1,35 @@
 {
-  "version": "0.1.0",
-  "description": "AudioCaptor — portable audio recording application",
-  "homepage": "https://github.com/ruslan-rv-ua/AudioCaptor",
-  "license": "MIT",
-  "architecture": {
-    "64bit": {
-      "url": "https://github.com/ruslan-rv-ua/AudioCaptor/releases/download/v0.1.0/AudioCaptor.exe",
-      "hash": "378cfd53ea61532ab1800580ff2102fbe0341028002b7364546f79febe43f39a"
-    }
-  },
-  "bin": "AudioCaptor.exe",
-  "shortcuts": [
-    ["AudioCaptor.exe", "AudioCaptor"]
-  ],
-  "pre_install": [
-    "if (!(Test-Path \"$persist_dir\\AudioCaptor-data\")) {",
-    "    New-Item -ItemType Directory -Force -Path \"$dir\\AudioCaptor-data\" | Out-Null",
-    "}"
-  ],
-  "persist": "AudioCaptor-data",
-  "checkver": {
-    "github": "https://github.com/ruslan-rv-ua/AudioCaptor"
-  },
-  "autoupdate": {
+    "version": "0.1.1",
+    "description": "AudioCaptor — portable audio recording application",
+    "homepage": "https://github.com/ruslan-rv-ua/AudioCaptor",
+    "license": "MIT",
     "architecture": {
-      "64bit": {
-        "url": "https://github.com/ruslan-rv-ua/AudioCaptor/releases/download/v$version/AudioCaptor.exe"
-      }
+        "64bit": {
+            "url": "https://github.com/ruslan-rv-ua/AudioCaptor/releases/download/v0.1.1/AudioCaptor.exe",
+            "hash": "aee80e402569d7f138fdd359bc92e16ccf85eaeb7536e8aa2eb7301ba2af4bc5"
+        }
+    },
+    "bin": "AudioCaptor.exe",
+    "shortcuts": [
+        [
+            "AudioCaptor.exe",
+            "AudioCaptor"
+        ]
+    ],
+    "pre_install": [
+        "if (!(Test-Path \"$persist_dir\\AudioCaptor-data\")) {",
+        "    New-Item -ItemType Directory -Force -Path \"$dir\\AudioCaptor-data\" | Out-Null",
+        "}"
+    ],
+    "persist": "AudioCaptor-data",
+    "checkver": {
+        "github": "https://github.com/ruslan-rv-ua/AudioCaptor"
+    },
+    "autoupdate": {
+        "architecture": {
+            "64bit": {
+                "url": "https://github.com/ruslan-rv-ua/AudioCaptor/releases/download/v$version/AudioCaptor.exe"
+            }
+        }
     }
-  }
 }
